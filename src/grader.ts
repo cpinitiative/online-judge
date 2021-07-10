@@ -58,14 +58,14 @@ export async function grade(
         if (language === Language.CPP) {
             compileResult = await getIsolateOutput(
                 box,
-                `sudo isolate -b 0 -p -E PATH --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
+                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
                     `-Im ${fileName}.cpp`,
                 fileName
             );
         } else if (language === Language.JAVA) {
             compileResult = await getIsolateOutput(
                 box,
-                `sudo isolate -b 0 -p -E PATH --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
+                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
                 fileName
             );
         }
@@ -90,20 +90,20 @@ export async function grade(
             if (language === Language.CPP) {
                 runResult = await getIsolateOutput(
                     box,
-                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --mem=256000 ` +
+                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 ` +
                         `--time=2 --extra-time=1 --wall-time=10 --run ./${fileName}`,
                     fileName
                 );
             } else if (language === Language.JAVA) {
                 runResult = await getIsolateOutput(
                     box,
-                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --time=5 --extra-time=2 --wall-time=10 -p -d /etc --run /usr/bin/java -- -Xss256m ${fileName}`,
+                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --time=5 --extra-time=2 --wall-time=10 -p -d /etc --run /usr/bin/java -- -Xss256m ${fileName}`,
                     fileName
                 );
             } else if (language === Language.PYTHON) {
                 runResult = await getIsolateOutput(
                     box,
-                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
+                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
                     fileName
                 );
             }
@@ -142,6 +142,7 @@ export async function grade(
                 pass: true,
                 time: runResult.execTime,
                 wallTime: runResult.execWallTime,
+                memory: runResult.memory,
             });
         }
 
@@ -166,6 +167,7 @@ type IsolateResult =
           execTime: number;
           execWallTime: number;
           stdout: string;
+          memory: number;
       }
     | {
           success: false;
@@ -195,19 +197,28 @@ async function getIsolateOutput(
             await Promise.all([
                 readFile(`${box}/${fileName}.out`),
                 readFile(`${box}/${fileName}.err`),
-                // readFile(`${box}/${fileName}.meta`),
+                readFile(`${box}/${fileName}.meta`),
             ])
         ).map((b) => b + "");
         await Promise.all([
             unlink(`${box}/${fileName}.out`),
             unlink(`${box}/${fileName}.err`),
-            // unlink(`${box}/${fileName}.meta`),
+            unlink(`${box}/${fileName}.meta`),
         ]);
+
+        const parsedMeta: Record<string, any> = meta
+            .split("\n")
+            .map((x) => x.split(":"))
+            .reduce((acc, x) => {
+                acc[x[0]] = x[1];
+                return acc;
+            }, {} as Record<string, any>);
 
         return {
             success: true,
             execTime,
             execWallTime,
+            memory: parsedMeta["cg-mem"],
             stdout: stdout,
         };
     } catch (e) {

@@ -47,4 +47,7 @@ export type GradeResult =
           // in milliseconds:
           time: number;
           wallTime: number;
+
+          // in kb?
+          memory: number;
       };
