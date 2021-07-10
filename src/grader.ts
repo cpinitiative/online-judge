@@ -151,7 +151,7 @@ export async function grade(
             results,
         };
     } catch (e) {
-        await exec(`isolate --cg --cleanup`);
+        // await exec(`isolate --cg --cleanup`);
         console.warn(e);
         return {
             success: false,
