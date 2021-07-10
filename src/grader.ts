@@ -1,189 +1,199 @@
 import fs from "fs";
 import { promisify } from "util";
-import { exec } from "./utils";
+import { exec, GradeResult, GradeResultError, Language } from "./utils";
+
 const writeFile = promisify(fs.writeFile);
 const readFile = promisify(fs.readFile);
+const unlink = promisify(fs.unlink);
 
 export async function grade(
+    testCases: {
+        input: string;
+        expectedOutput: string;
+    }[],
+    fileName: string,
     code: string,
-    options: {
-        language: "python" | "c++";
-    }
-) {
+    language: Language
+): Promise<
+    | {
+          success: true;
+          results: GradeResult[];
+      }
+    | {
+          success: false;
+          error:
+              | GradeResultError.COMPILE_ERROR
+              | GradeResultError.COMPILE_TIMEOUT;
+      }
+    | {
+          success: false;
+          error: GradeResultError.INTERNAL_ERROR;
+      }
+> {
     try {
-        const { language } = options;
         console.log(`Running ${language} code: \n${code}`);
-        const result = await run(code, language, "7\n1 2 5 10 394 495 3859");
-        const pass =
-            result.success &&
-            result.exec.stdout === "1 4 25 100 155236 245025 14891881";
-        let resultCode = "";
-        if (result.stderr) {
-            resultCode = "";
-        } else if (!result.output) {
-            resultCode = "EMPTY_OR_MISSING_OUTPUT";
-        } else {
-            resultCode = "WRONG_ANSWER";
+
+        const ext = { PYTHON: "py", CPP: "cpp", JAVA: "java" }[language];
+
+        const initResult = await exec(`sudo isolate --cg --init`).catch(
+            async (e) => {
+                console.log(e);
+                console.log("Cleaning up and trying again");
+                await exec(`isolate --cg --cleanup`);
+                return exec(`sudo isolate --cg --init`);
+            }
+        );
+
+        const dir = initResult.stdout;
+        const box = dir.replace(/\n/g, "") + "/box";
+
+        let compileResult: IsolateResult | null = null;
+        if (language === Language.CPP) {
+            compileResult = await getIsolateOutput(
+                box,
+                `sudo isolate -b 0 -p -E PATH --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
+                    `-Im ${fileName}.cpp`,
+                fileName
+            );
+        } else if (language === Language.JAVA) {
+            compileResult = await getIsolateOutput(
+                box,
+                `sudo isolate -b 0 -p -E PATH --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
+                fileName
+            );
         }
-        if (pass) {
-            resultCode = "PASS";
+
+        // for python, which doesn't need compilation, compileResult won't exist
+        if (compileResult && !compileResult.success) {
+            await exec(`sudo isolate --cg  --cleanup`);
+            return {
+                success: false,
+                error:
+                    compileResult.errorCode === "TIME_LIMIT_EXCEEDED"
+                        ? GradeResultError.COMPILE_TIMEOUT
+                        : GradeResultError.COMPILE_ERROR,
+            };
         }
-        if (!result.success) {
-            resultCode = result.errorCode;
+        const results: GradeResult[] = [];
+        for (let i = 0; i < testCases.length; i++) {
+            const { input, expectedOutput } = testCases[i];
+            await Promise.all([
+                writeFile(`${box}/${fileName}.${ext}`, code),
+                writeFile(`${box}/${fileName}.in`, input),
+            ]);
+
+            let runResult: IsolateResult | null = null;
+            if (language === Language.CPP) {
+                runResult = await getIsolateOutput(
+                    box,
+                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --mem=256000 ` +
+                        `--time=2 --extra-time=1 --wall-time=10 --run ./${fileName}`,
+                    fileName
+                );
+            } else if (language === Language.JAVA) {
+                runResult = await getIsolateOutput(
+                    box,
+                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --time=5 --extra-time=2 --wall-time=10 -p -d /etc --run /usr/bin/java -- -Xss256m ${fileName}`,
+                    fileName
+                );
+            } else if (language === Language.PYTHON) {
+                runResult = await getIsolateOutput(
+                    box,
+                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
+                    fileName
+                );
+            }
+            if (!runResult) {
+                throw new Error(
+                    "Unable to find run result. This can be caused if the language is not java, cpp, or python."
+                );
+            }
+            if (!runResult.success) {
+                results.push({
+                    pass: false,
+                    error:
+                        runResult.errorCode === "TIME_LIMIT_EXCEEDED"
+                            ? GradeResultError.TIME_LIMIT_EXCEEDED
+                            : GradeResultError.RUNTIME_ERROR,
+                });
+                continue;
+            }
+            if (!runResult.stdout) {
+                results.push({
+                    pass: false,
+                    error: GradeResultError.EMPTY_MISSING_OUTPUT,
+                });
+                continue;
+            }
+            if (runResult.stdout !== expectedOutput) {
+                results.push({
+                    pass: false,
+                    error: GradeResultError.WRONG_ANSWER,
+                });
+                continue;
+            }
+            results.push({
+                pass: true,
+                time: runResult.execTime,
+                wallTime: runResult.execWallTime,
+            });
         }
+
+        await exec(`sudo isolate --cg  --cleanup`);
         return {
-            pass,
-            result: resultCode,
-            ...result,
+            success: true,
+            results,
         };
     } catch (e) {
         await exec(`isolate --cg --cleanup`);
         console.warn(e);
         return {
-            pass: false,
-            result: "SERVER_ERROR_TRY_AGAIN_LATER",
+            success: false,
+            error: GradeResultError.INTERNAL_ERROR,
         };
     }
 }
 
-function getIsolateCommands(
-    problemName: string,
-    language: "python" | "c++" | "java"
-) {
-    const ext = { python: "py", "c++": "cpp", java: "java" }[language];
+// function getIsolateCommands(
+//     problemName: string,
+//     language: "python" | "c++" | "java"
+// ) {
+//     const ext = { python: "py", "c++": "cpp", java: "java" }[language];
+//
+//     return {
+//         python: [null, `/usr/bin/python3 -O ${problemName}.${ext}`],
+//         "c++": [
+//             `/usr/bin/g++ -O2 -lm -std=c++0x ${problemName}.${ext}`,
+//             `./${problemName}`,
+//         ],
+//         java: [
+//             `/usr/lib/jvm/jdk1.8.0_271/bin/javac ${problemName}.${ext}`,
+//             `/usr/lib/jvm/jdk1.8.0_271/bin/java ${problemName}`,
+//         ],
+//     }[language];
+// }
 
-    return {
-        python: [null, `/usr/bin/python3 -O ${problemName}.${ext}`],
-        "c++": [
-            `/usr/bin/g++ -O2 -lm -std=c++0x ${problemName}.${ext}`,
-            `./${problemName}`,
-        ],
-        java: [
-            `/usr/lib/jvm/jdk1.8.0_271/bin/javac ${problemName}.${ext}`,
-            `/usr/lib/jvm/jdk1.8.0_271/bin/java ${problemName}`,
-        ],
-    }[language];
-}
-
-type RunResult =
+type IsolateResult =
     | {
-          success: false;
-          status: "COMPILE_ERROR" | "COMPILE_TIME_LIMIT_EXCEEDED";
-          compile: {
-              time: number;
-              wallTime: number;
-              killed: boolean;
-              stdout: string;
-              stderr: string;
-          };
+          success: true;
+          execTime: number;
+          execWallTime: number;
+          stdout: string;
       }
     | {
-          success: boolean;
-          status:
-              | "SUCCESS"
-              | "RUNTIME_ERROR"
-              | "EMPTY_OR_MISSING_OUTPUT"
-              | "TIME_LIMIT_EXCEEDED";
-          compile: {
-              time: number;
-              wallTime: number;
-              killed: boolean;
-              stdout: string;
-              stderr: string;
-          };
-          exec: {
-              time: number;
-              wallTime: number;
-              killed: boolean;
-              stdout: string;
-              stderr: string;
-          };
+          success: false;
+          errorCode: string;
+          errorMessage: string;
       };
-export async function run(
-    code: string,
-    language: "python" | "c++",
-    input: string
-): Promise<RunResult> {
-    const limits = {
-        memory: 256 * 1000, // kb
-        time: 1, // s
-        extraTime: 1, // s
-        wallTime: 10, //s
-    };
-    const ext = { python: "py", "c++": "cpp", java: "java" }[language];
-    const problemName = "squares";
-    const compileOptions = `--meta=meta.txt --processes=100 --stderr=stderr.txt --stdout=stdout.txt --mem=${limits.memory} --time=30 --wall-time=90 --extra-time=10 --wall-time=${limits.wallTime}`;
-    const runOptions = `--meta=meta.txt --processes=100 --stderr=stderr.txt --stdin=stdin.txt --stdout=${problemName}.out --mem=${limits.memory} --time=${limits.time} --extra-time=${limits.extraTime} --wall-time=${limits.wallTime}`;
 
-    const initResult = await exec(`isolate --cg --init`).catch(async (e) => {
-        console.log(e);
-        console.log("Cleaning up and trying again");
-        await exec(`isolate --cg --cleanup`);
-        return exec(`isolate --cg --init`);
-    });
-
-    const dir = initResult.stdout;
-    const box = dir.replace(/\n/g, "") + "/box";
-
-    await Promise.all([
-        writeFile(`${box}/${problemName}.${ext}`, code),
-        writeFile(`${box}/${problemName}.in`, input),
-    ]);
-
-    const command = getCommands(problemName, language);
-
-    let compileOutput: IsolateResult;
-    if (command[0]) {
-        compileOutput = await runWithIsolate(box, compileOptions, command[0]);
-        if (!compileOutput?.success) {
-            // TODO
-            return {
-                status: "COMPILE_ERROR",
-            };
-        }
-    }
-
-    const runOutput = await runWithIsolate(compileOptions, command[1]);
-
-    await exec(`isolate --cg --cleanup`);
-    if (success) {
-        return {
-            success,
-            execTime,
-            execWallTime,
-            output: out + "",
-            stderr: err + "",
-            meta: meta,
-        };
-    } else {
-        return {
-            success,
-            execTime,
-            execWallTime,
-            output: out + "",
-            stderr: err + "",
-            errorCode: errorCode as "TIME_LIMIT_EXCEEDED" | "RUNTIME_ERROR",
-            meta: meta,
-        };
-    }
-}
-
-interface IsolateResult {
-    success: boolean;
-    execTime: number;
-    execWallTime: number;
-    errorCode: string;
-    fullOutput: string | {};
-}
-
-async function runWithIsolate(
+async function getIsolateOutput(
     box: string,
-    options: string,
-    command: string
+    command: string,
+    fileName: string
 ): Promise<IsolateResult> {
     try {
         const { stdout: isolateStdout, stderr: isolateStderr } = await exec(
-            `isolate --cg ${options} --env=HOME=/home/user --run -- ${command}`,
+            command,
             undefined,
             true
         );
@@ -197,11 +207,16 @@ async function runWithIsolate(
 
         const [stdout, stderr, meta] = (
             await Promise.all([
-                readFile(`${box}/stdout.txt`),
-                readFile(`${box}/stderr.txt`),
-                readFile(`${box}/meta.txt`),
+                readFile(`${box}/${fileName}.out`),
+                readFile(`${box}/${fileName}.err`),
+                readFile(`${box}/${fileName}.meta`),
             ])
         ).map((b) => b + "");
+        await Promise.all([
+            unlink(`${box}/${fileName}.out`),
+            unlink(`${box}/${fileName}.err`),
+            unlink(`${box}/${fileName}.meta`),
+        ]);
         const parsedMeta: Record<string, any> = meta
             .split("\n")
             .map((x) => x.split(":"))
@@ -214,22 +229,19 @@ async function runWithIsolate(
             success: true,
             execTime,
             execWallTime,
-            errorCode: "",
-            fullOutput: output,
+            stdout: stdout,
         };
     } catch (e) {
-        console.log({ ...e });
-
-        let code = "UNKNOWN";
+        let code = "OTHER_ERROR";
         if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
             code = "TIME_LIMIT_EXCEEDED";
+        } else {
+            console.log({ ...e });
         }
         return {
             success: false,
-            execTime: -1,
-            execWallTime: -1,
             errorCode: code,
-            fullOutput: e.message,
+            errorMessage: e.message,
         };
     }
 }

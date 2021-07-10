@@ -5,6 +5,9 @@ import https from "https";
 import fs from "fs";
 import morgan from "morgan";
 import path from "path";
+import { Language } from "./utils";
+import axios from "axios";
+import AdmZip from "adm-zip";
 
 const app = express();
 const port = 8000; //443; (TODO switch back to 443)
@@ -52,13 +55,37 @@ app.get("/isolate", async (req, res) => {
 
 app.post("/grade", async function (req, res) {
     // validate shape with yup?
-    const result = await grade(
-        req.body?.code ||
-            "#!/usr/bin/env python3\n\n" + 'print("Hello world!")',
-        {
-            language: "python",
-        }
+    const params = req.body;
+
+    if (!params || !params.code || !params.id) {
+        res.send("Error: no body");
+        return;
+    }
+    const testCaseReq = await axios.get(
+        `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`
     );
+
+    const zip = new AdmZip(testCaseReq.data);
+    const files = zip.getEntries().map((zipEntry) => ({
+        name: zipEntry.entryName,
+        value: zip.readAsText(zipEntry.entryName),
+    }));
+    if (files.length % 2 !== 0) {
+        res.send("Error: Unexpected test data. Nathan was wrong.");
+        return;
+    }
+    const cases = Array(files.length / 2).map(() => ({
+        input: "",
+        expectedOutput: "",
+    }));
+    files.forEach(({ name, value }) => {
+        if (name.indexOf(".in") !== -1) {
+            cases[parseInt(name.replace(".in", ""), 10)].input = value;
+        } else {
+            cases[parseInt(name.replace(".in", ""), 10)].expectedOutput = value;
+        }
+    });
+    const result = await grade(cases, "test", req.body.code, params.language);
     res.json(result);
 });
 
