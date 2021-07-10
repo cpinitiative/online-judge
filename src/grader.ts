@@ -40,6 +40,9 @@ export async function grade(
             [Language.JAVA]: "java",
         }[language];
 
+        if (!fs.existsSync("./tmp")) {
+            fs.mkdirSync("./tmp");
+        }
         await exec(`cd ./tmp`);
 
         const initResult = await exec(`sudo isolate --cg --init`).catch(
