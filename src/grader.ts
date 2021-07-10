@@ -240,6 +240,12 @@ async function getIsolateOutput(
         } else {
             console.log({ ...e });
         }
+        (
+            await Promise.all([
+                readFile(`${box}/${fileName}.out`),
+                readFile(`${box}/${fileName}.err`),
+            ])
+        ).forEach((x) => console.log(x));
         return {
             success: false,
             errorCode: code,
