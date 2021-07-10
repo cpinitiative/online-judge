@@ -62,16 +62,21 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
-    const { entries } = await unzip(
+    const testCaseReq = await axios.get(
         `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`
     );
+    if (!testCaseReq.data) {
+        res.send("Error: unable to download test data");
+        return;
+    }
+    const { entries } = await unzip(new Uint8Array(testCaseReq.data));
     const numFiles = Object.keys(entries).length;
     if (numFiles % 2 !== 0) {
         res.send("Error: Unexpected test data. Nathan was wrong.");
         return;
     }
 
-    const cases = Array(files.length / 2).map(() => ({
+    const cases = Array(numFiles.length / 2).map(() => ({
         input: "",
         expectedOutput: "",
     }));
