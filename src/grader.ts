@@ -101,6 +101,7 @@ export async function grade(
                     fileName
                 );
             } else if (language === Language.PYTHON) {
+                console.log("i did python");
                 runResult = await getIsolateOutput(
                     box,
                     `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
