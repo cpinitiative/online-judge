@@ -10,7 +10,7 @@ import axios from "axios";
 import AdmZip from "adm-zip";
 
 const app = express();
-const port = 8000; //443; (TODO switch back to 443)
+const port = 443;
 
 app.use(express.json());
 
