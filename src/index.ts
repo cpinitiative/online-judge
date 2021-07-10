@@ -7,7 +7,7 @@ import morgan from "morgan";
 import path from "path";
 import { Language } from "./utils";
 import axios from "axios";
-import AdmZip from "adm-zip";
+import { unzip } from "unzipit";
 
 const app = express();
 const port = 443;
@@ -61,30 +61,31 @@ app.post("/grade", async function (req, res) {
         res.send("Error: no body");
         return;
     }
-    const testCaseReq = await axios.get(
+
+    const { entries } = await unzip(
         `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`
     );
-
-    const zip = new AdmZip(testCaseReq.data);
-    const files = zip.getEntries().map((zipEntry) => ({
-        name: zipEntry.entryName,
-        value: zip.readAsText(zipEntry.entryName),
-    }));
-    if (files.length % 2 !== 0) {
+    const numFiles = Object.keys(entries).length;
+    if (numFiles % 2 !== 0) {
         res.send("Error: Unexpected test data. Nathan was wrong.");
         return;
     }
+
     const cases = Array(files.length / 2).map(() => ({
         input: "",
         expectedOutput: "",
     }));
-    files.forEach(({ name, value }) => {
+
+    // print all entries and their sizes
+    for (const e in Object.entries(entries)) {
+        const [name, value] = e;
         if (name.indexOf(".in") !== -1) {
             cases[parseInt(name.replace(".in", ""), 10)].input = value;
         } else {
             cases[parseInt(name.replace(".in", ""), 10)].expectedOutput = value;
         }
-    });
+    }
+
     const result = await grade(cases, "test", req.body.code, params.language);
     res.json(result);
 });
