@@ -24,6 +24,7 @@ export async function grade(
           error:
               | GradeResultError.COMPILE_ERROR
               | GradeResultError.COMPILE_TIMEOUT;
+          errorMessage?: string;
       }
     | {
           success: false;
@@ -46,6 +47,8 @@ export async function grade(
 
         const dir = initResult.stdout;
         const box = dir.replace(/\n/g, "") + "/box";
+
+        await writeFile(`${box}/${fileName}.${ext}`, code);
 
         let compileResult: IsolateResult | null = null;
         if (language === Language.CPP) {
@@ -72,16 +75,13 @@ export async function grade(
                     compileResult.errorCode === "TIME_LIMIT_EXCEEDED"
                         ? GradeResultError.COMPILE_TIMEOUT
                         : GradeResultError.COMPILE_ERROR,
+                errorMessage: compileResult.errorMessage,
             };
         }
         const results: GradeResult[] = [];
         for (let i = 0; i < testCases.length; i++) {
             const { input, expectedOutput } = testCases[i];
-            await Promise.all([
-                writeFile(`${box}/${fileName}.${ext}`, code),
-                writeFile(`${box}/${fileName}.in`, input),
-            ]);
-
+            await writeFile(`${box}/${fileName}.in`, input);
             let runResult: IsolateResult | null = null;
             if (language === Language.CPP) {
                 runResult = await getIsolateOutput(

@@ -57,11 +57,16 @@ app.post("/grade", async function (req, res) {
     // validate shape with yup?
     const params = req.body;
 
-    if (!params || !params.code || !params.id) {
+    if (!params || !params.code || !params.id || !params.language) {
         res.send("Error: no body");
         return;
     }
 
+    if (!["python", "cpp", "java"].includes(params.language.toLowerCase())) {
+        res.send(
+            "Error: unsupported language. You must specify python, java, or cpp"
+        );
+    }
     const testCaseReq = await axios.get(
         `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`,
         { responseType: "arraybuffer" }
@@ -98,7 +103,12 @@ app.post("/grade", async function (req, res) {
         }
     }
 
-    const result = await grade(cases, "test", req.body.code, params.language);
+    const result = await grade(
+        cases,
+        "test",
+        req.body.code,
+        params.language.toUpperCase()
+    );
     res.json(result);
 });
 
