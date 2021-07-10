@@ -63,12 +63,14 @@ app.post("/grade", async function (req, res) {
     }
 
     const testCaseReq = await axios.get(
-        `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`
+        `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`,
+        { responseType: "arraybuffer" }
     );
     if (!testCaseReq.data) {
         res.send("Error: unable to download test data");
         return;
     }
+
     const { entries } = await unzip(new Uint8Array(testCaseReq.data));
     const numFiles = Object.keys(entries).length;
     if (numFiles % 2 !== 0) {
@@ -76,18 +78,23 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
-    const cases = Array(numFiles / 2).map(() => ({
-        input: "",
-        expectedOutput: "",
-    }));
+    const cases = Array(numFiles / 2)
+        .fill(null)
+        .map(() => ({
+            input: "",
+            expectedOutput: "",
+        }));
 
     // print all entries and their sizes
-    for (const e in Object.entries(entries)) {
-        const [name, value] = e;
+    for (const e of Object.entries(entries)) {
+        const [name, entry] = e;
+        const value = await entry.text();
         if (name.indexOf(".in") !== -1) {
-            cases[parseInt(name.replace(".in", ""), 10)].input = value;
+            cases[parseInt(name.replace(".in", ""), 10) - 1].input = value;
         } else {
-            cases[parseInt(name.replace(".in", ""), 10)].expectedOutput = value;
+            cases[
+                parseInt(name.replace(".out", ""), 10) - 1
+            ].expectedOutput = value;
         }
     }
 

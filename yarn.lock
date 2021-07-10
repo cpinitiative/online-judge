@@ -2381,6 +2381,13 @@ unpipe@1.0.0, unpipe@~1.0.0:
   resolved "https://registry.yarnpkg.com/unpipe/-/unpipe-1.0.0.tgz#b2bf4ee8514aae6165b4817829d21b2ef49904ec"
   integrity sha1-sr9O6FFKrmFltIF4KdIbLvSZBOw=
 
+unzipit@^1.3.5:
+  version "1.3.5"
+  resolved "https://registry.yarnpkg.com/unzipit/-/unzipit-1.3.5.tgz#3ee48a478a3b7e248d65d3bc0bb189a8d63c3ce1"
+  integrity sha512-GNJVu1nkQYaw9ploGIuXzrP9bE6y+/V748P3RsMn8W0fHEEkecwd+SHwKH9jXOSuBAKTEOqqF66k0GfFQZ1ReA==
+  dependencies:
+    uzip-module "^1.0.2"
+
 update-notifier@^4.1.0:
   version "4.1.3"
   resolved "https://registry.yarnpkg.com/update-notifier/-/update-notifier-4.1.3.tgz#be86ee13e8ce48fb50043ff72057b5bd598e1ea3"
@@ -2418,6 +2425,11 @@ utils-merge@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/utils-merge/-/utils-merge-1.0.1.tgz#9f95710f50a267947b2ccc124741c1028427e713"
   integrity sha1-n5VxD1CiZ5R7LMwSR0HBAoQn5xM=
+
+uzip-module@^1.0.2:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/uzip-module/-/uzip-module-1.0.3.tgz#6bbabe2a3efea5d5a4a47479f523a571de3427ce"
+  integrity sha512-AMqwWZaknLM77G+VPYNZLEruMGWGzyigPK3/Whg99B3S6vGHuqsyl5ZrOv1UUF3paGK1U6PM0cnayioaryg/fA==
 
 v8-compile-cache@^2.0.3:
   version "2.2.0"
