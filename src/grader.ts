@@ -156,25 +156,6 @@ export async function grade(
     }
 }
 
-// function getIsolateCommands(
-//     problemName: string,
-//     language: "python" | "c++" | "java"
-// ) {
-//     const ext = { python: "py", "c++": "cpp", java: "java" }[language];
-//
-//     return {
-//         python: [null, `/usr/bin/python3 -O ${problemName}.${ext}`],
-//         "c++": [
-//             `/usr/bin/g++ -O2 -lm -std=c++0x ${problemName}.${ext}`,
-//             `./${problemName}`,
-//         ],
-//         java: [
-//             `/usr/lib/jvm/jdk1.8.0_271/bin/javac ${problemName}.${ext}`,
-//             `/usr/lib/jvm/jdk1.8.0_271/bin/java ${problemName}`,
-//         ],
-//     }[language];
-// }
-
 type IsolateResult =
     | {
           success: true;
@@ -238,6 +219,7 @@ async function getIsolateOutput(
         if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
             code = "TIME_LIMIT_EXCEEDED";
         } else {
+            console.log(await readFile(`${box}/${fileName}.err`));
             console.log("error:", { ...e });
         }
 
