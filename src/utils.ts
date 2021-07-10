@@ -1,9 +1,9 @@
 import { exec as synchronousExec, ExecOptions } from "child_process";
 
 export enum Language {
-    JAVA = "JAVA",
-    CPP = "CPP",
-    PYTHON = "PYTHON",
+    JAVA = "java",
+    CPP = "cpp",
+    PYTHON = "python",
 }
 
 /**
@@ -28,13 +28,13 @@ export const exec = (
     );
 
 export enum GradeResultError {
-    COMPILE_TIMEOUT = "COMPILE_TIMEOUT",
-    COMPILE_ERROR = "COMPILE_ERROR",
-    RUNTIME_ERROR = "RUNTIME_ERROR",
-    TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED",
-    EMPTY_MISSING_OUTPUT = "EMPTY_MISSING_OUTPUT",
-    WRONG_ANSWER = "WRONG_ANSWER",
-    INTERNAL_ERROR = "INTERNAL_ERROR",
+    COMPILE_TIMEOUT = "compile_timeout",
+    COMPILE_ERROR = "compile_error",
+    RUNTIME_ERROR = "runtime_error",
+    TIME_LIMIT_EXCEEDED = "time_limit_exceeded",
+    EMPTY_MISSING_OUTPUT = "empty_missing_output",
+    WRONG_ANSWER = "wrong_answer",
+    INTERNAL_ERROR = "internal_error",
 }
 export type GradeResult =
     | {

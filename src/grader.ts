@@ -34,7 +34,11 @@ export async function grade(
     try {
         console.log(`Running ${language} code: \n${code}`);
 
-        const ext = { PYTHON: "py", CPP: "cpp", JAVA: "java" }[language];
+        const ext = {
+            [Language.PYTHON]: "py",
+            [Language.CPP]: "cpp",
+            [Language.JAVA]: "java",
+        }[language];
 
         const initResult = await exec(`sudo isolate --cg --init`).catch(
             async (e) => {

@@ -103,12 +103,7 @@ app.post("/grade", async function (req, res) {
         }
     }
 
-    const result = await grade(
-        cases,
-        "test",
-        req.body.code,
-        params.language.toUpperCase()
-    );
+    const result = await grade(cases, "test", req.body.code, params.language);
     res.json(result);
 });
 
