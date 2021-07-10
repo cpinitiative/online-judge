@@ -25,8 +25,10 @@ const queue: {
     submission: Submission;
     submissionRef: admin.firestore.DocumentReference;
 }[] = [];
-
+let processingQueue = false;
 const processQueue = async () => {
+    if (processingQueue) return;
+    processingQueue = true;
     while (queue.length !== 0) {
         const first:
             | {
@@ -97,6 +99,7 @@ const processQueue = async () => {
             submissionRef
         );
     }
+    processingQueue = false;
 };
 app.use(express.json());
 
