@@ -211,13 +211,13 @@ async function getIsolateOutput(
             await Promise.all([
                 readFile(`${box}/${fileName}.out`),
                 readFile(`${box}/${fileName}.err`),
-                readFile(`${box}/${fileName}.meta`),
+                // readFile(`${box}/${fileName}.meta`),
             ])
         ).map((b) => b + "");
         await Promise.all([
             unlink(`${box}/${fileName}.out`),
             unlink(`${box}/${fileName}.err`),
-            unlink(`${box}/${fileName}.meta`),
+            // unlink(`${box}/${fileName}.meta`),
         ]);
         const parsedMeta: Record<string, any> = meta
             .split("\n")
