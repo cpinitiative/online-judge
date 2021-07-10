@@ -179,54 +179,54 @@ async function getIsolateOutput(
         undefined,
         true
     );
-    try {
-        const times = /OK \(([.\w]+) sec real, ([.\w]+) sec wall\)/
-            .exec(isolateStderr)
-            ?.slice(1) || ["-1", "-1"];
-        const [execTime, execWallTime] = times.map((t) =>
-            Math.round(parseFloat(t) * 1000)
-        );
+    // try {
+    const times = /OK \(([.\w]+) sec real, ([.\w]+) sec wall\)/
+        .exec(isolateStderr)
+        ?.slice(1) || ["-1", "-1"];
+    const [execTime, execWallTime] = times.map((t) =>
+        Math.round(parseFloat(t) * 1000)
+    );
 
-        const [stdout, stderr, meta] = (
-            await Promise.all([
-                readFile(`${box}/${fileName}.out`),
-                readFile(`${box}/${fileName}.err`),
-                // readFile(`${box}/${fileName}.meta`),
-            ])
-        ).map((b) => b + "");
+    const [stdout, stderr, meta] = (
         await Promise.all([
-            unlink(`${box}/${fileName}.out`),
-            unlink(`${box}/${fileName}.err`),
-            // unlink(`${box}/${fileName}.meta`),
-        ]);
-        const parsedMeta: Record<string, any> = meta
-            .split("\n")
-            .map((x) => x.split(":"))
-            .reduce((acc, x) => {
-                acc[x[0]] = x[1];
-                return acc;
-            }, {} as Record<string, any>);
+            readFile(`${box}/${fileName}.out`),
+            readFile(`${box}/${fileName}.err`),
+            // readFile(`${box}/${fileName}.meta`),
+        ])
+    ).map((b) => b + "");
+    await Promise.all([
+        unlink(`${box}/${fileName}.out`),
+        unlink(`${box}/${fileName}.err`),
+        // unlink(`${box}/${fileName}.meta`),
+    ]);
+    const parsedMeta: Record<string, any> = meta
+        .split("\n")
+        .map((x) => x.split(":"))
+        .reduce((acc, x) => {
+            acc[x[0]] = x[1];
+            return acc;
+        }, {} as Record<string, any>);
 
-        return {
-            success: true,
-            execTime,
-            execWallTime,
-            stdout: stdout,
-        };
-    } catch (e) {
-        let code = "OTHER_ERROR";
-        if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
-            code = "TIME_LIMIT_EXCEEDED";
-        } else {
-            console.log("error:", { ...e });
-        }
-
-        return {
-            success: false,
-            errorCode: code,
-            errorMessage: e.message,
-        };
-    }
+    return {
+        success: true,
+        execTime,
+        execWallTime,
+        stdout: stdout,
+    };
+    // } catch (e) {
+    //     let code = "OTHER_ERROR";
+    //     if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
+    //         code = "TIME_LIMIT_EXCEEDED";
+    //     } else {
+    //         console.log("error:", { ...e });
+    //     }
+    //
+    //     return {
+    //         success: false,
+    //         errorCode: code,
+    //         errorMessage: e.message,
+    //     };
+    // }
 }
 
 export async function getIsolateVersion(): Promise<string> {
