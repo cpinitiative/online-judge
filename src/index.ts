@@ -62,7 +62,7 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
-    if (!["python", "cpp", "java"].includes(params.language.toLowerCase())) {
+    if (!["python", "cpp", "java"].includes(params.language)) {
         res.send(
             "Error: unsupported language. You must specify python, java, or cpp"
         );
