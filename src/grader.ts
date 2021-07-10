@@ -94,6 +94,7 @@ export async function grade(
                 compilationError: true,
                 compilationErrorMessage: compileResult.errorMessage,
                 result: 0,
+                gradingStatus: "done",
             });
 
             return {

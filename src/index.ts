@@ -189,9 +189,13 @@ app.post("/grade", async function (req, res) {
     }
 
     if (!["python", "cpp", "java"].includes(submission.language)) {
-        res.send(
-            "Error: unsupported language. You must specify python, java, or cpp"
-        );
+        res.send({
+            success: false,
+            errorCode: "UNKNOWN_LANGUAGE",
+            errorMessage:
+                "unsupported language. You must specify python, java, or cpp",
+        });
+        return;
     }
 
     queue.push({
