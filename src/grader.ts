@@ -74,14 +74,14 @@ export async function grade(
         if (language === Language.CPP) {
             compileResult = await getIsolateOutput(
                 box,
-                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
+                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
                     `-Im ${fileName}.cpp`,
                 fileName
             );
         } else if (language === Language.JAVA) {
             compileResult = await getIsolateOutput(
                 box,
-                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
+                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
                 fileName
             );
         }
