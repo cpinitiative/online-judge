@@ -174,13 +174,12 @@ async function getIsolateOutput(
     command: string,
     fileName: string
 ): Promise<IsolateResult> {
+    const { stdout: isolateStdout, stderr: isolateStderr } = await exec(
+        command,
+        undefined,
+        true
+    );
     try {
-        const { stdout: isolateStdout, stderr: isolateStderr } = await exec(
-            command,
-            undefined,
-            true
-        );
-
         const times = /OK \(([.\w]+) sec real, ([.\w]+) sec wall\)/
             .exec(isolateStderr)
             ?.slice(1) || ["-1", "-1"];
@@ -219,7 +218,6 @@ async function getIsolateOutput(
         if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
             code = "TIME_LIMIT_EXCEEDED";
         } else {
-            console.log(await readFile(`${box}/${fileName}.err`));
             console.log("error:", { ...e });
         }
 
