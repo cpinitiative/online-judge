@@ -104,8 +104,10 @@ export async function grade(
                 );
             }
             if (!runResult) {
+                console.log("language", language);
+                await exec(`isolate --cg --cleanup`);
                 throw new Error(
-                    "Unable to find run result. This can be caused if the language is not java, cpp, or python."
+                    "Unable to find run result. This can happen if the language is not java, cpp, or python."
                 );
             }
             if (!runResult.success) {
