@@ -191,6 +191,9 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
+    if (submission.language === "py") {
+        submission.language = "python";
+    }
     if (!["python", "cpp", "java"].includes(submission.language)) {
         res.send({
             success: false,
