@@ -238,14 +238,9 @@ async function getIsolateOutput(
         if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
             code = "TIME_LIMIT_EXCEEDED";
         } else {
-            console.log({ ...e });
+            console.log("error:", { ...e });
         }
-        (
-            await Promise.all([
-                readFile(`${box}/${fileName}.out`),
-                readFile(`${box}/${fileName}.err`),
-            ])
-        ).forEach((x) => console.log(x));
+
         return {
             success: false,
             errorCode: code,
