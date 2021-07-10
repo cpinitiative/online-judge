@@ -1,6 +1,12 @@
 import fs from "fs";
 import { promisify } from "util";
-import { exec, GradeResult, GradeResultError, Language } from "./utils";
+import {
+    exec,
+    ExecutionStatus,
+    GradeResult,
+    GradeResultError,
+    Language,
+} from "./utils";
 import * as admin from "firebase-admin";
 
 const writeFile = promisify(fs.writeFile);
@@ -34,6 +40,9 @@ export async function grade(
       }
 > {
     try {
+        await submissionRef.update({
+            gradingStatus: "in_progress",
+        });
         console.log(`Running ${language} code: \n${code}`);
 
         const ext = {
@@ -204,12 +213,14 @@ export async function grade(
         }
 
         await exec(`sudo isolate --cg  --cleanup`);
+
         await submissionRef.update({
             result:
                 results.reduce(
                     (numCorrect, r) => numCorrect + (r.pass ? 1 : 0),
                     0
                 ) / testCases.length,
+            gradingStatus: "done",
         });
         return {
             success: true,
@@ -292,7 +303,6 @@ async function getIsolateOutput(
         } else {
             console.log(e);
             console.log("error:", { ...e });
-            throw e;
         }
 
         return {

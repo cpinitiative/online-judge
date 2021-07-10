@@ -7,7 +7,15 @@ export enum Language {
     CPP = "cpp",
     PYTHON = "python",
 }
-
+export enum ExecutionStatus {
+    AC = "AC",
+    WA = "WA",
+    CE = "CE",
+    TLE = "TLE",
+    MLE = "MLE",
+    RTE = "RTE",
+    PENDING = "Pending",
+}
 /**
  * async exec
  * @param cmd
@@ -62,14 +70,15 @@ export type Submission = {
     language: Language;
     timestamp: Timestamp;
     result: number;
+    status: any;
 } & (
     | {
           type: "Self Graded";
-          status: any;
       }
     | ({
           type: "Online Judge";
-          gradingStatus: "waiting" | "in_progress" | "done" | "judge_error";
+          gradingStatus: "waiting" | "in_progress" | "done" | "error";
+          errorMessage?: string;
           compilationError?: boolean;
           judgeProblemId: string;
       } & (

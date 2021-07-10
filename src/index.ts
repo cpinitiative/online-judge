@@ -21,7 +21,83 @@ admin.initializeApp({
 
 const app = express();
 const port = 443;
+const queue: {
+    submission: Submission;
+    submissionRef: admin.firestore.DocumentReference;
+}[] = [];
 
+const processQueue = async () => {
+    while (queue.length !== 0) {
+        const first:
+            | {
+                  submission: Submission;
+                  submissionRef: admin.firestore.DocumentReference;
+              }
+            | undefined = queue.shift();
+
+        if (!first) return;
+        const { submission, submissionRef } = first;
+
+        await submissionRef.update({
+            gradingStatus: "in_progress",
+        });
+
+        if (submission.type == "Self Graded") continue;
+
+        const testCaseReq = await axios.get(
+            `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
+            { responseType: "arraybuffer" }
+        );
+        if (!testCaseReq.data) {
+            await submissionRef.update({
+                gradingStatus: "error",
+                errorMessage:
+                    "Unable to download test data. Is judgeProblemId valid?",
+            });
+            continue;
+        }
+
+        const { entries } = await unzip(new Uint8Array(testCaseReq.data));
+        const numFiles = Object.keys(entries).length;
+        if (numFiles === 0 || numFiles % 2 !== 0) {
+            await submissionRef.update({
+                gradingStatus: "error",
+                errorMessage:
+                    "Malformed test data. Expected a zip file with 2 files for" +
+                    " each test case (NUM.in and NUM.out), and at least 1 test case. (Nathan screwed up; go yell at him)",
+            });
+            continue;
+        }
+
+        const cases = Array(numFiles / 2)
+            .fill(null)
+            .map(() => ({
+                input: "",
+                expectedOutput: "",
+            }));
+
+        // print all entries and their sizes
+        for (const e of Object.entries(entries)) {
+            const [name, entry] = e;
+            const value = await entry.text();
+            if (name.indexOf(".in") !== -1) {
+                cases[parseInt(name.replace(".in", ""), 10) - 1].input = value;
+            } else {
+                cases[
+                    parseInt(name.replace(".out", ""), 10) - 1
+                ].expectedOutput = value;
+            }
+        }
+
+        const result = await grade(
+            cases,
+            "test",
+            submission.code,
+            submission.language,
+            submissionRef
+        );
+    }
+};
 app.use(express.json());
 
 const server = https.createServer(
@@ -117,55 +193,21 @@ app.post("/grade", async function (req, res) {
             "Error: unsupported language. You must specify python, java, or cpp"
         );
     }
-    const testCaseReq = await axios.get(
-        `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
-        { responseType: "arraybuffer" }
-    );
-    if (!testCaseReq.data) {
-        res.send("Error: unable to download test data");
-        return;
-    }
 
-    const { entries } = await unzip(new Uint8Array(testCaseReq.data));
-    const numFiles = Object.keys(entries).length;
-    if (numFiles % 2 !== 0) {
-        res.send("Error: Unexpected test data. Nathan was wrong.");
-        return;
-    }
-
-    const cases = Array(numFiles / 2)
-        .fill(null)
-        .map(() => ({
-            input: "",
-            expectedOutput: "",
-        }));
-
-    // print all entries and their sizes
-    for (const e of Object.entries(entries)) {
-        const [name, entry] = e;
-        const value = await entry.text();
-        if (name.indexOf(".in") !== -1) {
-            cases[parseInt(name.replace(".in", ""), 10) - 1].input = value;
-        } else {
-            cases[
-                parseInt(name.replace(".out", ""), 10) - 1
-            ].expectedOutput = value;
-        }
-    }
-
+    queue.push({
+        submission,
+        submissionRef,
+    });
+    console.log("Queue length after current submission: " + queue.length);
     res.json({
         success: true,
         message: "The program has been added to the queue.",
-        queuePlace: 0,
+        queuePlace: queue.length,
     });
 
-    const result = await grade(
-        cases,
-        "test",
-        submission.code,
-        submission.language,
-        submissionRef
-    );
+    processQueue().then(() => {
+        /* do nothing */
+    });
 });
 
 server.listen(port, () => {
