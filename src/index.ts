@@ -91,7 +91,7 @@ const processQueue = async () => {
 
         const result = await grade(
             cases,
-            "test",
+            "Main",
             submission.code,
             submission.language,
             submissionRef
