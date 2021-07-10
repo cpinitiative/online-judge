@@ -1,18 +1,16 @@
-import { NextFunction, RequestHandler } from "express";
-import express from "express";
+import express, { NextFunction } from "express";
 import { getIsolateVersion, grade } from "./grader";
 import https from "https";
 import fs from "fs";
 import morgan from "morgan";
 import path from "path";
-import { GradeResult, Language, Submission } from "./utils";
+import { Language, Submission } from "./utils";
 import axios from "axios";
 import { unzip } from "unzipit";
 import * as admin from "firebase-admin";
 
 import serviceAccountKey from "../serviceAccountKey.json";
 import { firestore } from "firebase-admin/lib/firestore";
-import Timestamp = firestore.Timestamp;
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccountKey),
@@ -191,8 +189,10 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     if (submission.language === "py") {
-        submission.language = "python";
+        submission.language = Language.PYTHON;
     }
     if (!["python", "cpp", "java"].includes(submission.language)) {
         res.send({
