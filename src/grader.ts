@@ -1,6 +1,7 @@
 import fs from "fs";
 import { promisify } from "util";
 import { exec, GradeResult, GradeResultError, Language } from "./utils";
+import * as admin from "firebase-admin";
 
 const writeFile = promisify(fs.writeFile);
 const readFile = promisify(fs.readFile);
@@ -13,7 +14,8 @@ export async function grade(
     }[],
     fileName: string,
     code: string,
-    language: Language
+    language: Language,
+    submissionRef: admin.firestore.DocumentReference
 ): Promise<
     | {
           success: true;
@@ -78,6 +80,13 @@ export async function grade(
         // for python, which doesn't need compilation, compileResult won't exist
         if (compileResult && !compileResult.success) {
             await exec(`sudo isolate --cg  --cleanup`);
+
+            await submissionRef.update({
+                compilationError: true,
+                compilationErrorMessage: compileResult.errorMessage,
+                result: 0,
+            });
+
             return {
                 success: false,
                 error:
@@ -118,39 +127,90 @@ export async function grade(
                     "Unable to find run result. This can happen if the language is not java, cpp, or python."
                 );
             }
+
             if (!runResult.success) {
-                results.push({
+                const result: {
+                    caseId: number;
+                    pass: false;
+                    error: GradeResultError;
+                } = {
+                    caseId: i,
                     pass: false,
                     error:
                         runResult.errorCode === "TIME_LIMIT_EXCEEDED"
                             ? GradeResultError.TIME_LIMIT_EXCEEDED
                             : GradeResultError.RUNTIME_ERROR,
+                };
+                await submissionRef.update({
+                    compilationError: false,
+                    testCases: admin.firestore.FieldValue.arrayUnion(result),
                 });
+                results.push(result);
                 continue;
             }
             if (!runResult.stdout) {
-                results.push({
+                const result: {
+                    caseId: number;
+                    pass: false;
+                    error: GradeResultError;
+                } = {
+                    caseId: i,
                     pass: false,
                     error: GradeResultError.EMPTY_MISSING_OUTPUT,
+                };
+                await submissionRef.update({
+                    compilationError: false,
+                    testCases: admin.firestore.FieldValue.arrayUnion(result),
                 });
+                results.push(result);
                 continue;
             }
             if (runResult.stdout !== expectedOutput) {
-                results.push({
+                const result: {
+                    caseId: number;
+                    pass: false;
+                    error: GradeResultError;
+                } = {
+                    caseId: i,
                     pass: false,
                     error: GradeResultError.WRONG_ANSWER,
+                };
+                await submissionRef.update({
+                    compilationError: false,
+                    testCases: admin.firestore.FieldValue.arrayUnion(result),
                 });
+                results.push(result);
                 continue;
             }
-            results.push({
+
+            const result: {
+                caseId: number;
+                pass: true;
+                time: number;
+                wallTime: number;
+                memory: number;
+            } = {
+                caseId: i,
                 pass: true,
                 time: runResult.execTime,
                 wallTime: runResult.execWallTime,
                 memory: runResult.memory,
+            };
+            await submissionRef.update({
+                compilationError: false,
+                testCases: admin.firestore.FieldValue.arrayUnion(result),
             });
+            results.push(result);
         }
 
         await exec(`sudo isolate --cg  --cleanup`);
+        await submissionRef.update({
+            result:
+                results.reduce(
+                    (numCorrect, r) => numCorrect + (r.pass ? 1 : 0),
+                    0
+                ) / testCases.length,
+        });
         return {
             success: true,
             results,

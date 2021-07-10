@@ -23,6 +23,7 @@
         "adm-zip": "^0.5.5",
         "axios": "^0.21.1",
         "express": "^4.17.1",
+        "firebase-admin": "^9.10.0",
         "https": "^1.0.0",
         "husky": "^4.3.6",
         "lint-staged": "^10.5.3",

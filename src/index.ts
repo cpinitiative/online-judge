@@ -5,9 +5,19 @@ import https from "https";
 import fs from "fs";
 import morgan from "morgan";
 import path from "path";
-import { Language } from "./utils";
+import { GradeResult, Language, Submission } from "./utils";
 import axios from "axios";
 import { unzip } from "unzipit";
+import * as admin from "firebase-admin";
+
+import serviceAccountKey from "../serviceAccountKey.json";
+import { firestore } from "firebase-admin/lib/firestore";
+import Timestamp = firestore.Timestamp;
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccountKey),
+    databaseURL: "https://usaco-guide.firebaseio.com",
+});
 
 const app = express();
 const port = 443;
@@ -57,18 +67,58 @@ app.post("/grade", async function (req, res) {
     // validate shape with yup?
     const params = req.body;
 
-    if (!params || !params.code || !params.id || !params.language) {
-        res.send("Error: no body");
+    if (
+        !params ||
+        !params.groupId ||
+        !params.postId ||
+        !params.problemId ||
+        !params.submissionId
+    ) {
+        res.json({
+            success: false,
+            errorCode: "INVALID_PARAMETERS",
+            errorMessage:
+                "Invalid POST parameters. Expected groupId, postId, problemId, and submissionId",
+        });
+        return;
+    }
+    const submissionRef = admin
+        .firestore()
+        .collection("groups")
+        .doc(params.groupId)
+        .collection("posts")
+        .doc(params.postId)
+        .collection("problems")
+        .doc(params.problemId)
+        .collection("submissions")
+        .doc(params.submissionId);
+    const submissionDoc = await submissionRef.get();
+    const submission: Submission = submissionDoc.data() as Submission;
+    if (!submission) {
+        res.json({
+            success: false,
+            errorCode: "SUBMISSION_NOT_FOUND",
+            errorMessage: "Submission not found.",
+        });
         return;
     }
 
-    if (!["python", "cpp", "java"].includes(params.language)) {
+    if (submission.type !== "Online Judge") {
+        res.json({
+            success: false,
+            errorCode: "INVALID_SUBMISSION_TYPE",
+            errorMessage: "The submission must be of type Online Judge.",
+        });
+        return;
+    }
+
+    if (!["python", "cpp", "java"].includes(submission.language)) {
         res.send(
             "Error: unsupported language. You must specify python, java, or cpp"
         );
     }
     const testCaseReq = await axios.get(
-        `https://onlinejudge.blob.core.windows.net/test-cases/${params.id}.zip`,
+        `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
         { responseType: "arraybuffer" }
     );
     if (!testCaseReq.data) {
@@ -103,8 +153,19 @@ app.post("/grade", async function (req, res) {
         }
     }
 
-    const result = await grade(cases, "test", req.body.code, params.language);
-    res.json(result);
+    res.json({
+        success: true,
+        message: "The program has been added to the queue.",
+        queuePlace: 0,
+    });
+
+    const result = await grade(
+        cases,
+        "test",
+        submission.code,
+        submission.language,
+        submissionRef
+    );
 });
 
 server.listen(port, () => {

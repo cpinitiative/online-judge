@@ -1,4 +1,6 @@
 import { exec as synchronousExec, ExecOptions } from "child_process";
+import { firestore } from "firebase-admin/lib/firestore";
+import Timestamp = firestore.Timestamp;
 
 export enum Language {
     JAVA = "java",
@@ -36,7 +38,7 @@ export enum GradeResultError {
     WRONG_ANSWER = "wrong_answer",
     INTERNAL_ERROR = "internal_error",
 }
-export type GradeResult =
+export type GradeResult = { caseId: number } & (
     | {
           pass: false;
           error: GradeResultError;
@@ -50,4 +52,35 @@ export type GradeResult =
 
           // in kb?
           memory: number;
-      };
+      }
+);
+export type Submission = {
+    id: string;
+    problemId: string;
+    userId: string;
+    code: string;
+    language: Language;
+    timestamp: Timestamp;
+    result: number;
+} & (
+    | {
+          type: "Self Graded";
+          status: any;
+      }
+    | ({
+          type: "Online Judge";
+          gradingStatus: "waiting" | "in_progress" | "done" | "judge_error";
+          compilationError?: boolean;
+          judgeProblemId: string;
+      } & (
+          | Record<string, never>
+          | {
+                compilationError: false;
+                testCases?: GradeResult[];
+            }
+          | {
+                compilationError: true;
+                compilationErrorMessage: string;
+            }
+      ))
+);
