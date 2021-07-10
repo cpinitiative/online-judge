@@ -222,7 +222,7 @@ async function getIsolateOutput(
             success: true,
             execTime,
             execWallTime,
-            memory: parsedMeta["cg-mem"],
+            memory: parseInt(parsedMeta["cg-mem"], 10),
             stdout: stdout,
         };
     } catch (e) {
