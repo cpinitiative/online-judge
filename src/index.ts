@@ -76,7 +76,7 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
-    const cases = Array(numFiles.length / 2).map(() => ({
+    const cases = Array(numFiles / 2).map(() => ({
         input: "",
         expectedOutput: "",
     }));
