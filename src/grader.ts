@@ -12,6 +12,21 @@ import * as admin from "firebase-admin";
 const writeFile = promisify(fs.writeFile);
 const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
+/**
+ *
+ * @param filePath - path to file
+ * @param silent - if true and an error occurs (such as file not found), an empty string is returned. If false, the error is thrown.
+ */
+const readThenDelete = async (filePath: string, silent = false): string => {
+    try {
+        const data = await readFile(filePath);
+        await unlink(filePath);
+        return data + "";
+    } catch (e) {
+        if (!silent) throw e;
+        return "";
+    }
+};
 
 export async function grade(
     testCases: {
@@ -103,7 +118,7 @@ export async function grade(
                     compileResult.errorCode === "TIME_LIMIT_EXCEEDED"
                         ? GradeResultError.COMPILE_TIMEOUT
                         : GradeResultError.COMPILE_ERROR,
-                errorMessage: compileResult.errorMessage,
+                errorMessage: compileResult.stderr,
             };
         }
         const results: GradeResult[] = [];
@@ -243,12 +258,15 @@ type IsolateResult =
           execTime: number;
           execWallTime: number;
           stdout: string;
+          stderr: string;
           memory: number;
       }
     | {
           success: false;
           errorCode: string;
           errorMessage: string;
+          stdout?: string;
+          stderr?: string;
       };
 
 async function getIsolateOutput(
@@ -269,17 +287,10 @@ async function getIsolateOutput(
             Math.round(parseFloat(t) * 1000)
         );
 
-        const [stdout, stderr, meta] = (
-            await Promise.all([
-                readFile(`${box}/${fileName}.out`),
-                readFile(`${box}/${fileName}.err`),
-                readFile(`${fileName}.meta`),
-            ])
-        ).map((b) => b + "");
-        await Promise.all([
-            unlink(`${box}/${fileName}.out`),
-            unlink(`${box}/${fileName}.err`),
-            unlink(`${fileName}.meta`),
+        const [stdout, stderr, meta] = await Promise.all([
+            readThenDelete(`${box}/${fileName}.out`),
+            readThenDelete(`${box}/${fileName}.err`),
+            readThenDelete(`${fileName}.meta`),
         ]);
 
         const parsedMeta: Record<string, any> = meta
@@ -296,6 +307,7 @@ async function getIsolateOutput(
             execWallTime,
             memory: parseInt(parsedMeta["cg-mem"], 10),
             stdout: stdout,
+            stderr: stderr,
         };
     } catch (e) {
         let code = "OTHER_ERROR";
@@ -306,10 +318,17 @@ async function getIsolateOutput(
             console.log("error:", { ...e });
         }
 
+        const [stdout, stderr] = await Promise.all([
+            readThenDelete(`${box}/${fileName}.out`, true),
+            readThenDelete(`${box}/${fileName}.err`, true),
+        ]);
+
         return {
             success: false,
             errorCode: code,
             errorMessage: e.message,
+            stdout,
+            stderr,
         };
     }
 }
