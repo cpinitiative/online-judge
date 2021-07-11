@@ -110,7 +110,13 @@ export async function grade(
 
             await submissionRef.update({
                 compilationError: true,
-                compilationErrorMessage: compileResult.errorMessage,
+                compilationErrorMessage:
+                    "stdout " +
+                    compileResult.stdout +
+                    " | stderr " +
+                    compileResult.stderr +
+                    " | isoerr " +
+                    compileResult.errorMessage,
                 result: 0,
                 gradingStatus: "done",
             });
