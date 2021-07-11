@@ -121,7 +121,10 @@ export async function grade(
                     compileResult.errorCode === "TIME_LIMIT_EXCEEDED"
                         ? GradeResultError.COMPILE_TIMEOUT
                         : GradeResultError.COMPILE_ERROR,
-                errorMessage: compileResult.stderr,
+                errorMessage:
+                    compileResult.stdout ||
+                    compileResult.stderr ||
+                    compileResult.errorMessage,
             };
         }
         const results: GradeResult[] = [];
