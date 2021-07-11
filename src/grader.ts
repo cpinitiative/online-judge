@@ -111,12 +111,7 @@ export async function grade(
             await submissionRef.update({
                 compilationError: true,
                 compilationErrorMessage:
-                    "stdout:\n" +
-                    compileResult.stdout +
-                    "\n=====\nstderr:\n" +
-                    compileResult.stderr +
-                    "\n=====\nisolate error:" +
-                    compileResult.errorMessage,
+                    compileResult.stderr || compileResult.errorMessage,
                 result: 0,
                 gradingStatus: "done",
             });
@@ -128,12 +123,7 @@ export async function grade(
                         ? GradeResultError.COMPILE_TIMEOUT
                         : GradeResultError.COMPILE_ERROR,
                 errorMessage:
-                    "stdout " +
-                    compileResult.stdout +
-                    " | stderr " +
-                    compileResult.stderr +
-                    " | isoerr " +
-                    compileResult.errorMessage,
+                    compileResult.stderr || compileResult.errorMessage,
             };
         }
         const results: GradeResult[] = [];
