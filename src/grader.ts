@@ -111,11 +111,11 @@ export async function grade(
             await submissionRef.update({
                 compilationError: true,
                 compilationErrorMessage:
-                    "stdout " +
+                    "stdout:\n" +
                     compileResult.stdout +
-                    " | stderr " +
+                    "\n=====\nstderr:\n" +
                     compileResult.stderr +
-                    " | isoerr " +
+                    "\n=====\nisolate error:" +
                     compileResult.errorMessage,
                 result: 0,
                 gradingStatus: "done",
