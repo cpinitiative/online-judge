@@ -17,7 +17,10 @@ const unlink = promisify(fs.unlink);
  * @param filePath - path to file
  * @param silent - if true and an error occurs (such as file not found), an empty string is returned. If false, the error is thrown.
  */
-const readThenDelete = async (filePath: string, silent = false): string => {
+const readThenDelete = async (
+    filePath: string,
+    silent = false
+): Promise<string> => {
     try {
         const data = await readFile(filePath);
         await unlink(filePath);
