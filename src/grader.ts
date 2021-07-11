@@ -122,8 +122,11 @@ export async function grade(
                         ? GradeResultError.COMPILE_TIMEOUT
                         : GradeResultError.COMPILE_ERROR,
                 errorMessage:
-                    compileResult.stdout ||
-                    compileResult.stderr ||
+                    "stdout " +
+                    compileResult.stdout +
+                    " | stderr " +
+                    compileResult.stderr +
+                    " | isoerr " +
                     compileResult.errorMessage,
             };
         }
