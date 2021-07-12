@@ -195,7 +195,10 @@ export async function grade(
                 results.push(result);
                 continue;
             }
-            if (runResult.stdout !== expectedOutput) {
+            if (
+                runResult.stdout.replace(/\n$/g, "") !==
+                expectedOutput.replace(/\n$/g, "")
+            ) {
                 const result: {
                     caseId: number;
                     pass: false;
