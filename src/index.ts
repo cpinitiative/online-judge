@@ -3,14 +3,13 @@ import { getIsolateVersion, grade } from "./grader";
 import https from "https";
 import fs from "fs";
 import morgan from "morgan";
-import path from "path";
 import { Language, Submission } from "./utils";
 import axios from "axios";
 import { unzip } from "unzipit";
 import * as admin from "firebase-admin";
 import winston from "winston";
 import serviceAccountKey from "../serviceAccountKey.json";
-import { firestore } from "firebase-admin/lib/firestore";
+import Bull from "bull";
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccountKey),
@@ -42,105 +41,73 @@ const logger = winston.createLogger({
 
 const app = express();
 const port = 443;
-const queue: {
+
+const submissionQueue = new Bull<{
     submission: Submission;
     submissionRef: admin.firestore.DocumentReference;
-}[] = [];
-let processingQueue = false;
-const processQueue = async () => {
-    if (processingQueue) return;
-    processingQueue = true;
-    while (queue.length !== 0) {
-        const first:
-            | {
-                  submission: Submission;
-                  submissionRef: admin.firestore.DocumentReference;
-              }
-            | undefined = queue.shift();
+}>("submission_queue");
+submissionQueue.process(async (job) => {
+    const { submission, submissionRef } = job.data;
+    await submissionRef.update({
+        gradingStatus: "in_progress",
+    });
 
-        if (!first) return;
-        try {
-            const { submission, submissionRef } = first;
+    if (submission.type == "Self Graded") return;
 
-            await submissionRef.update({
-                gradingStatus: "in_progress",
-            });
+    const testCaseReq = await axios.get(
+        `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
+        { responseType: "arraybuffer" }
+    );
+    if (!testCaseReq.data) {
+        await submissionRef.update({
+            gradingStatus: "error",
+            errorMessage:
+                "Unable to download test data. Is judgeProblemId valid?",
+        });
+        return;
+    }
 
-            if (submission.type == "Self Graded") continue;
+    const { entries } = await unzip(new Uint8Array(testCaseReq.data));
+    const numFiles = Object.keys(entries).length;
+    if (numFiles === 0 || numFiles % 2 !== 0) {
+        await submissionRef.update({
+            gradingStatus: "error",
+            errorMessage:
+                "Malformed test data. Expected a zip file with 2 files for" +
+                " each test case (NUM.in and NUM.out), and at least 1 test case. (Nathan screwed up; go yell at him)",
+        });
+        return;
+    }
 
-            const testCaseReq = await axios.get(
-                `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
-                { responseType: "arraybuffer" }
-            );
-            if (!testCaseReq.data) {
-                await submissionRef.update({
-                    gradingStatus: "error",
-                    errorMessage:
-                        "Unable to download test data. Is judgeProblemId valid?",
-                });
-                continue;
-            }
+    const cases = Array(numFiles / 2)
+        .fill(null)
+        .map(() => ({
+            input: "",
+            expectedOutput: "",
+        }));
 
-            const { entries } = await unzip(new Uint8Array(testCaseReq.data));
-            const numFiles = Object.keys(entries).length;
-            if (numFiles === 0 || numFiles % 2 !== 0) {
-                await submissionRef.update({
-                    gradingStatus: "error",
-                    errorMessage:
-                        "Malformed test data. Expected a zip file with 2 files for" +
-                        " each test case (NUM.in and NUM.out), and at least 1 test case. (Nathan screwed up; go yell at him)",
-                });
-                continue;
-            }
-
-            const cases = Array(numFiles / 2)
-                .fill(null)
-                .map(() => ({
-                    input: "",
-                    expectedOutput: "",
-                }));
-
-            // print all entries and their sizes
-            for (const e of Object.entries(entries)) {
-                const [name, entry] = e;
-                const value = await entry.text();
-                if (name.indexOf(".in") !== -1) {
-                    cases[
-                        parseInt(name.replace(".in", ""), 10) - 1
-                    ].input = value;
-                } else {
-                    cases[
-                        parseInt(name.replace(".out", ""), 10) - 1
-                    ].expectedOutput = value;
-                }
-            }
-
-            await grade(
-                logger,
-                cases,
-                "Main",
-                submission.code,
-                submission.language,
-                submissionRef
-            );
-        } catch (e) {
-            logger.error(
-                "error while processing queue (THIS SHOULD NEVER HAPPEN)",
-                e
-            );
-            // as a catchall, keep moving on even if there is an error.
-            logger.error(
-                "Moved on to next queue item. Items left in queue: " +
-                    queue.length
-            );
-            console.log(
-                "Unexpected error while processing queue. Moved on to next queue item. Items left in queue: " +
-                    queue.length
-            );
+    for (const e of Object.entries(entries)) {
+        const [name, entry] = e;
+        const value = await entry.text();
+        if (name.indexOf(".in") !== -1) {
+            cases[parseInt(name.replace(".in", ""), 10) - 1].input = value;
+        } else {
+            cases[
+                parseInt(name.replace(".out", ""), 10) - 1
+            ].expectedOutput = value;
         }
     }
-    processingQueue = false;
-};
+
+    await grade(
+        logger,
+        cases,
+        "Main",
+        submission.code,
+        submission.language,
+        submissionRef
+    );
+});
+
 app.use(express.json());
 
 const server = https.createServer(
@@ -152,19 +119,13 @@ const server = https.createServer(
 );
 
 app.use(express.json());
-const accessLogStream = fs.createWriteStream(
-    path.join(__dirname, "access.log"),
-    { flags: "a" }
-);
 
-app.use(morgan("combined", { stream: accessLogStream }));
 app.use(
-    morgan("dev", {
-        skip: function (req, res) {
-            return res.statusCode < 400;
-        },
+    morgan("combined", {
+        stream: { write: (message) => logger.info(message.trim()) },
     })
 );
+
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {
@@ -180,6 +141,14 @@ app.get("/", (req, res) => {
 
 app.get("/isolate", async (req, res) => {
     res.send((await getIsolateVersion()).replace(/\n/g, "<br/>"));
+});
+
+app.get("/stats", async (req, res) => {
+    const jobCounts = submissionQueue.getJobCounts();
+    res.json({
+        ok: true,
+        queue: jobCounts,
+    });
 });
 
 app.post("/grade", async function (req, res) {
@@ -246,20 +215,20 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
-    queue.push({
+    submissionQueue.add({
         submission,
         submissionRef,
     });
-    logger.debug("Queue length after current submission: " + queue.length);
-    console.log("Queue length after current submission: " + queue.length);
+
+    const jobCounts = await submissionQueue.getJobCounts();
+    logger.debug("Queue counts: ", jobCounts);
+    console.log(
+        "Queue length after current submission: " + JSON.stringify(jobCounts)
+    );
     res.json({
         success: true,
         message: "The program has been added to the queue.",
-        queuePlace: queue.length,
-    });
-
-    processQueue().then(() => {
-        /* do nothing */
+        queuePlace: jobCounts.waiting,
     });
 });
 
