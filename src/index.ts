@@ -143,7 +143,7 @@ app.get("/isolate", async (req, res) => {
     res.send((await getIsolateVersion()).replace(/\n/g, "<br/>"));
 });
 
-app.get("/stats", async (req, res) => {
+app.get("/status", async (req, res) => {
     const jobCounts = submissionQueue.getJobCounts();
     res.json({
         ok: true,
