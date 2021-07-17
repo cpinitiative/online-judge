@@ -167,7 +167,7 @@ app.get("/isolate", async (req, res) => {
 app.post("/grade", async function (req, res) {
     // validate shape with yup?
     const params = req.body;
-    logger.data("Received new request", req.body);
+    logger.debug("Received new request", req.body);
     if (
         !params ||
         !params.groupId ||
