@@ -223,7 +223,8 @@ app.post("/grade", async function (req, res) {
     const jobCounts = await submissionQueue.getJobCounts();
     logger.debug("Queue counts: ", jobCounts);
     console.log(
-        "Queue length after current submission: " + JSON.stringify(jobCounts)
+        "Queue length including current submission: " +
+            JSON.stringify(jobCounts)
     );
     res.json({
         success: true,
