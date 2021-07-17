@@ -172,6 +172,7 @@ export async function grade(
                     caseId: number;
                     pass: false;
                     error: GradeResultError;
+                    errorMessage?: string;
                 } = {
                     caseId: i,
                     pass: false,
@@ -179,6 +180,17 @@ export async function grade(
                         runResult.errorCode === "TIME_LIMIT_EXCEEDED"
                             ? GradeResultError.TIME_LIMIT_EXCEEDED
                             : GradeResultError.RUNTIME_ERROR,
+
+                    // show error if it fails the first test case.
+                    ...(runResult.errorCode === "TIME_LIMIT_EXCEEDED" || i > 0
+                        ? {}
+                        : {
+                              errorMessage: (
+                                  runResult.stderr ||
+                                  runResult.stdout ||
+                                  ""
+                              ).substring(0, 10000),
+                          }),
                 };
                 await submissionRef.update({
                     compilationError: false,
@@ -333,7 +345,7 @@ async function getIsolateOutput(
             readThenDelete(`${box}/${fileName}.err`, true),
         ]);
 
-        let code = "OTHER_ERROR";
+        let code = "RUNTIME_ERROR"; // or a server error while code was running
         if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
             code = "TIME_LIMIT_EXCEEDED";
         } else {

@@ -59,67 +59,85 @@ const processQueue = async () => {
             | undefined = queue.shift();
 
         if (!first) return;
-        const { submission, submissionRef } = first;
+        try {
+            const { submission, submissionRef } = first;
 
-        await submissionRef.update({
-            gradingStatus: "in_progress",
-        });
-
-        if (submission.type == "Self Graded") continue;
-
-        const testCaseReq = await axios.get(
-            `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
-            { responseType: "arraybuffer" }
-        );
-        if (!testCaseReq.data) {
             await submissionRef.update({
-                gradingStatus: "error",
-                errorMessage:
-                    "Unable to download test data. Is judgeProblemId valid?",
+                gradingStatus: "in_progress",
             });
-            continue;
-        }
 
-        const { entries } = await unzip(new Uint8Array(testCaseReq.data));
-        const numFiles = Object.keys(entries).length;
-        if (numFiles === 0 || numFiles % 2 !== 0) {
-            await submissionRef.update({
-                gradingStatus: "error",
-                errorMessage:
-                    "Malformed test data. Expected a zip file with 2 files for" +
-                    " each test case (NUM.in and NUM.out), and at least 1 test case. (Nathan screwed up; go yell at him)",
-            });
-            continue;
-        }
+            if (submission.type == "Self Graded") continue;
 
-        const cases = Array(numFiles / 2)
-            .fill(null)
-            .map(() => ({
-                input: "",
-                expectedOutput: "",
-            }));
-
-        // print all entries and their sizes
-        for (const e of Object.entries(entries)) {
-            const [name, entry] = e;
-            const value = await entry.text();
-            if (name.indexOf(".in") !== -1) {
-                cases[parseInt(name.replace(".in", ""), 10) - 1].input = value;
-            } else {
-                cases[
-                    parseInt(name.replace(".out", ""), 10) - 1
-                ].expectedOutput = value;
+            const testCaseReq = await axios.get(
+                `https://onlinejudge.blob.core.windows.net/test-cases/${submission.judgeProblemId}.zip`,
+                { responseType: "arraybuffer" }
+            );
+            if (!testCaseReq.data) {
+                await submissionRef.update({
+                    gradingStatus: "error",
+                    errorMessage:
+                        "Unable to download test data. Is judgeProblemId valid?",
+                });
+                continue;
             }
-        }
 
-        const result = await grade(
-            logger,
-            cases,
-            "Main",
-            submission.code,
-            submission.language,
-            submissionRef
-        );
+            const { entries } = await unzip(new Uint8Array(testCaseReq.data));
+            const numFiles = Object.keys(entries).length;
+            if (numFiles === 0 || numFiles % 2 !== 0) {
+                await submissionRef.update({
+                    gradingStatus: "error",
+                    errorMessage:
+                        "Malformed test data. Expected a zip file with 2 files for" +
+                        " each test case (NUM.in and NUM.out), and at least 1 test case. (Nathan screwed up; go yell at him)",
+                });
+                continue;
+            }
+
+            const cases = Array(numFiles / 2)
+                .fill(null)
+                .map(() => ({
+                    input: "",
+                    expectedOutput: "",
+                }));
+
+            // print all entries and their sizes
+            for (const e of Object.entries(entries)) {
+                const [name, entry] = e;
+                const value = await entry.text();
+                if (name.indexOf(".in") !== -1) {
+                    cases[
+                        parseInt(name.replace(".in", ""), 10) - 1
+                    ].input = value;
+                } else {
+                    cases[
+                        parseInt(name.replace(".out", ""), 10) - 1
+                    ].expectedOutput = value;
+                }
+            }
+
+            await grade(
+                logger,
+                cases,
+                "Main",
+                submission.code,
+                submission.language,
+                submissionRef
+            );
+        } catch (e) {
+            logger.error(
+                "error while processing queue (THIS SHOULD NEVER HAPPEN)",
+                e
+            );
+            // as a catchall, keep moving on even if there is an error.
+            logger.error(
+                "Moved on to next queue item. Items left in queue: " +
+                    queue.length
+            );
+            console.log(
+                "Unexpected error while processing queue. Moved on to next queue item. Items left in queue: " +
+                    queue.length
+            );
+        }
     }
     processingQueue = false;
 };
@@ -233,6 +251,7 @@ app.post("/grade", async function (req, res) {
         submissionRef,
     });
     logger.debug("Queue length after current submission: " + queue.length);
+    console.log("Queue length after current submission: " + queue.length);
     res.json({
         success: true,
         message: "The program has been added to the queue.",
