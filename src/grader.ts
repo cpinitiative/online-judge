@@ -328,17 +328,23 @@ async function getIsolateOutput(
             stderr: stderr,
         };
     } catch (e) {
-        let code = "OTHER_ERROR";
-        if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
-            code = "TIME_LIMIT_EXCEEDED";
-        } else {
-            logger.error(`Unknown error ${e.code} (msg: ${e.message}). ${e}`);
-        }
-
         const [stdout, stderr] = await Promise.all([
             readThenDelete(`${box}/${fileName}.out`, true),
             readThenDelete(`${box}/${fileName}.err`, true),
         ]);
+
+        let code = "OTHER_ERROR";
+        if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
+            code = "TIME_LIMIT_EXCEEDED";
+        } else {
+            logger.error(`Unknown error ${e.code} (msg: ${e.message}). ${e}`, {
+                success: false,
+                errorCode: code,
+                errorMessage: e.message,
+                stdout,
+                stderr,
+            });
+        }
 
         return {
             success: false,
