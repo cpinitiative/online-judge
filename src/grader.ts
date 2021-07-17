@@ -139,6 +139,7 @@ export async function grade(
             let runResult: IsolateResult | null = null;
             if (language === Language.CPP) {
                 runResult = await getIsolateOutput(
+                    logger,
                     box,
                     `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 ` +
                         `--time=2 --extra-time=1 --wall-time=10 --run ./${fileName}`,
@@ -146,12 +147,14 @@ export async function grade(
                 );
             } else if (language === Language.JAVA) {
                 runResult = await getIsolateOutput(
+                    logger,
                     box,
                     `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --time=5 --extra-time=2 --wall-time=10 -p -d /etc --run /usr/bin/java -- -Xss256m ${fileName}`,
                     fileName
                 );
             } else if (language === Language.PYTHON) {
                 runResult = await getIsolateOutput(
+                    logger,
                     box,
                     `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
                     fileName
