@@ -63,7 +63,7 @@ export async function grade(
         await submissionRef.update({
             gradingStatus: "in_progress",
         });
-        winston.debug(`Processing submission ${submissionRef.path}`);
+        logger.debug(`Processing submission ${submissionRef.path}`);
 
         const ext = {
             [Language.PYTHON]: "py",
@@ -78,7 +78,7 @@ export async function grade(
 
         const initResult = await exec(`sudo isolate --cg --init`).catch(
             async (e) => {
-                winston.warn(
+                logger.warn(
                     "Received error initializing box (will clean up and try again):" +
                         e
                 );
@@ -161,7 +161,7 @@ export async function grade(
                 );
             }
             if (!runResult) {
-                winston.error(
+                logger.error(
                     `Unable to find run result for language ${language} (is the language case sensitive correct?).`
                 );
                 throw new Error("Couldn't find run result");
