@@ -1,5 +1,6 @@
 import fs from "fs";
 import { promisify } from "util";
+import winston from "winston";
 import {
     exec,
     ExecutionStatus,
@@ -32,6 +33,7 @@ const readThenDelete = async (
 };
 
 export async function grade(
+    logger: winston.Logger,
     testCases: {
         input: string;
         expectedOutput: string;
@@ -61,7 +63,7 @@ export async function grade(
         await submissionRef.update({
             gradingStatus: "in_progress",
         });
-        console.log(`Running ${language} code: \n${code}`);
+        winston.debug(`Processing submission ${submissionRef.path}`);
 
         const ext = {
             [Language.PYTHON]: "py",
@@ -76,8 +78,10 @@ export async function grade(
 
         const initResult = await exec(`sudo isolate --cg --init`).catch(
             async (e) => {
-                console.log(e);
-                console.log("Cleaning up and trying again");
+                winston.warn(
+                    "Received error initializing box (will clean up and try again):" +
+                        e
+                );
                 await exec(`isolate --cg --cleanup`);
                 return exec(`sudo isolate --cg --init`);
             }
@@ -91,6 +95,7 @@ export async function grade(
         let compileResult: IsolateResult | null = null;
         if (language === Language.CPP) {
             compileResult = await getIsolateOutput(
+                logger,
                 box,
                 `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
                     `-Im ${fileName}.cpp`,
@@ -98,6 +103,7 @@ export async function grade(
             );
         } else if (language === Language.JAVA) {
             compileResult = await getIsolateOutput(
+                logger,
                 box,
                 `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
                 fileName
@@ -152,10 +158,10 @@ export async function grade(
                 );
             }
             if (!runResult) {
-                console.log("language", language);
-                throw new Error(
-                    "Unable to find run result. This can happen if the language is not java, cpp, or python."
+                winston.error(
+                    `Unable to find run result for language ${language} (is the language case sensitive correct?).`
                 );
+                throw new Error("Couldn't find run result");
             }
 
             if (!runResult.success) {
@@ -278,6 +284,7 @@ type IsolateResult =
       };
 
 async function getIsolateOutput(
+    logger: winston.Logger,
     box: string,
     command: string,
     fileName: string
@@ -322,8 +329,7 @@ async function getIsolateOutput(
         if (e.message.toLowerCase().indexOf("time limit exceeded") > -1) {
             code = "TIME_LIMIT_EXCEEDED";
         } else {
-            console.log(e);
-            console.log("error:", { ...e });
+            logger.error(`Unknown error ${e.code} (msg: ${e.message}). ${e}`);
         }
 
         const [stdout, stderr] = await Promise.all([

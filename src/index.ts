@@ -17,27 +17,28 @@ admin.initializeApp({
     databaseURL: "https://usaco-guide.firebaseio.com",
 });
 
-// const logger = winston.createLogger({
-//     level: 'info',
-//     format: winston.format.json(),
-//     defaultMeta: { service: 'user-service' },
-//     transports: [
-//         //
-//         // - Write all logs with level `error` and below to `error.log`
-//         // - Write all logs with level `info` and below to `combined.log`
-//         //
-//         new winston.transports.File({ filename: 'error.log', level: 'error' }),
-//         new winston.transports.File({ filename: 'combined.log' }),
-//     ],
-// });
-//
-// //
-// // If we're not in production then log to the `console` with the format:
-// // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-// //
-// logger.add(new winston.transports.Console({
-//     format: winston.format.simple(),
-// }));
+const logger = winston.createLogger({
+    level: "debug",
+    format: winston.format.simple(),
+    transports: [
+        //
+        // - Write all logs with level `error` and below to `error.log`
+        // - Write all logs with level `info` and below to `combined.log`
+        //
+        new winston.transports.Console({ level: "warning" }),
+
+        // maxSize = 10000000 is 10MB
+        new winston.transports.File({
+            filename: "error.log",
+            level: "warning",
+            maxsize: 10000000,
+        }),
+        new winston.transports.File({
+            filename: "combined.log",
+            maxsize: 10000000,
+        }),
+    ],
+});
 
 const app = express();
 const port = 443;
@@ -112,6 +113,7 @@ const processQueue = async () => {
         }
 
         const result = await grade(
+            logger,
             cases,
             "Main",
             submission.code,
@@ -165,7 +167,7 @@ app.get("/isolate", async (req, res) => {
 app.post("/grade", async function (req, res) {
     // validate shape with yup?
     const params = req.body;
-
+    logger.data("Received new request", req.body);
     if (
         !params ||
         !params.groupId ||
@@ -230,7 +232,7 @@ app.post("/grade", async function (req, res) {
         submission,
         submissionRef,
     });
-    console.log("Queue length after current submission: " + queue.length);
+    logger.debug("Queue length after current submission: " + queue.length);
     res.json({
         success: true,
         message: "The program has been added to the queue.",
