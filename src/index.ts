@@ -169,7 +169,7 @@ app.get("/isolate", async (req, res) => {
 });
 
 app.get("/status", async (req, res) => {
-    const jobCounts = submissionQueue.getJobCounts();
+    const jobCounts = await submissionQueue.getJobCounts();
     res.json({
         ok: true,
         queue: jobCounts,
