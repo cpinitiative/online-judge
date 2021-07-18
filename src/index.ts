@@ -3,7 +3,7 @@ import { getIsolateVersion, grade } from "./grader";
 import https from "https";
 import fs from "fs";
 import morgan from "morgan";
-import { Language, Submission } from "./utils";
+import { getJobPath, Language, Submission, SubmissionQueueItem } from "./utils";
 import axios from "axios";
 import { unzip } from "unzipit";
 import * as admin from "firebase-admin";
@@ -44,12 +44,23 @@ const logger = winston.createLogger({
 
 const app = express();
 
-const submissionQueue = new Bull<{
-    submission: Submission;
-    submissionRef: admin.firestore.DocumentReference;
-}>("submission_queue");
+const submissionQueue = new Bull<SubmissionQueueItem>("submission_queue");
 submissionQueue.process(async (job) => {
-    const { submission, submissionRef } = job.data;
+    const { groupId, postId, problemId, submissionId } = job.data;
+
+    // can't pass submission itself because Bull can't handle non-primitive data
+    // types, since those can't be stored in redis for persistence
+    const submissionRef = admin
+        .firestore()
+        .collection("groups")
+        .doc(groupId)
+        .collection("posts")
+        .doc(postId)
+        .collection("problems")
+        .doc(problemId)
+        .collection("submissions")
+        .doc(submissionId);
+    const submission = (await submissionRef.get()).data() as Submission;
     console.log("Queue processing job: " + submissionRef.path);
     logger.debug("Queue processing job: " + submissionRef.path);
     await submissionRef.update({
@@ -113,11 +124,11 @@ submissionQueue.process(async (job) => {
 });
 
 submissionQueue.on("completed", function (job) {
-    logger.info("Completed Job: " + job.data.submissionRef.path);
+    logger.info("Completed Job: " + getJobPath(job));
 });
 
 submissionQueue.on("failed", async function (job, error) {
-    logger.error("Failed Job: " + job.data.submissionRef.path, error);
+    logger.error("Failed Job: " + getJobPath(job), error);
 });
 
 app.use(express.json());
@@ -228,8 +239,10 @@ app.post("/grade", async function (req, res) {
     }
 
     await submissionQueue.add({
-        submission,
-        submissionRef,
+        groupId: params.groupId,
+        postId: params.postId,
+        problemId: params.problemId,
+        submissionId: params.submissionId,
     });
 
     const jobCounts = await submissionQueue.getJobCounts();

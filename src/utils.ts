@@ -1,3 +1,4 @@
+import Bull from "bull";
 import { exec as synchronousExec, ExecOptions } from "child_process";
 import { firestore } from "firebase-admin/lib/firestore";
 import Timestamp = firestore.Timestamp;
@@ -62,6 +63,15 @@ export type GradeResult = { caseId: number } & (
           memory: number;
       }
 );
+export type SubmissionQueueItem = {
+    groupId: string;
+    postId: string;
+    problemId: string;
+    submissionId: string;
+};
+export function getJobPath(job: Bull.Job<SubmissionQueueItem>) {
+    return `/groups/${job.data.groupId}/posts/${job.data.postId}/problems/${job.data.problemId}/submissions/${job.data.submissionId}`;
+}
 export type Submission = {
     id: string;
     problemId: string;
