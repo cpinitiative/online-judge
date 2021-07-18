@@ -31,12 +31,12 @@ const logger = winston.createLogger({
 
         // maxSize = 10000000 is approx 10MB
         new winston.transports.File({
-            filename: "error.log",
+            filename: "logs/error.log",
             level: "warning",
             maxsize: 10000000,
         }),
         new winston.transports.File({
-            filename: "combined.log",
+            filename: "logs/all.log",
             maxsize: 10000000,
         }),
     ],
