@@ -4,3 +4,4 @@ node_modules
 sslcert/
 serviceAccountKey.json
 build/
+*.meta
