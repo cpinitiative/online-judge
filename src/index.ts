@@ -29,7 +29,7 @@ const logger = winston.createLogger({
         //
         new winston.transports.Console({ level: "warning" }),
 
-        // maxSize = 10000000 is 10MB
+        // maxSize = 10000000 is approx 10MB
         new winston.transports.File({
             filename: "error.log",
             level: "warning",
@@ -50,6 +50,8 @@ const submissionQueue = new Bull<{
 }>("submission_queue");
 submissionQueue.process(async (job) => {
     const { submission, submissionRef } = job.data;
+    console.log("Queue processing job: " + submissionRef.path);
+    logger.debug("Queue processing job: " + submissionRef.path);
     await submissionRef.update({
         gradingStatus: "in_progress",
     });
@@ -217,7 +219,7 @@ app.post("/grade", async function (req, res) {
         return;
     }
 
-    submissionQueue.add({
+    await submissionQueue.add({
         submission,
         submissionRef,
     });
