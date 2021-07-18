@@ -11,6 +11,9 @@ import winston from "winston";
 import serviceAccountKey from "../serviceAccountKey.json";
 import Bull from "bull";
 
+const args = process.argv.slice(2);
+const port = args.length > 0 ? args[0] : 443;
+
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccountKey),
     databaseURL: "https://usaco-guide.firebaseio.com",
@@ -40,7 +43,6 @@ const logger = winston.createLogger({
 });
 
 const app = express();
-const port = 443;
 
 const submissionQueue = new Bull<{
     submission: Submission;
