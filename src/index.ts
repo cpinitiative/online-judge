@@ -61,6 +61,16 @@ submissionQueue.process(async (job) => {
         .collection("submissions")
         .doc(submissionId);
     const submission = (await submissionRef.get()).data() as Submission;
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (submission.language === "py") {
+        logger.error(
+            `Received unknown language "${submission.language}". Inferred language 'python', but this should be changed in the future.`
+        );
+        submission.language = Language.PYTHON;
+    }
+
     console.log("Queue processing job: " + submissionRef.path);
     logger.debug("Queue processing job: " + submissionRef.path);
     await submissionRef.update({
@@ -228,6 +238,9 @@ app.post("/grade", async function (req, res) {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     if (submission.language === "py") {
+        logger.error(
+            `Received unknown language "${submission.language}". Inferred language 'python', but this should be changed in the future.`
+        );
         submission.language = Language.PYTHON;
     }
     if (!["python", "cpp", "java"].includes(submission.language)) {
