@@ -112,6 +112,14 @@ submissionQueue.process(async (job) => {
     );
 });
 
+submissionQueue.on("completed", function (job) {
+    logger.info("Completed Job: " + job.data.submissionRef.path);
+});
+
+submissionQueue.on("failed", async function (job, error) {
+    logger.error("Failed Job: " + job.data.submissionRef.path, error);
+});
+
 app.use(express.json());
 
 const server = https.createServer(
