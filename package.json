@@ -4,7 +4,7 @@
     "description": "Online Judge / Grading Server on express",
     "main": "build/src/index.js",
     "scripts": {
-        "start": "concurrently \"redis-server\" \"node build/src/index.js\"",
+        "start": "concurrently \"redis-server ./redis.conf\" \"node ./build/src/index.js\"",
         "build": "tsc --project ./",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
