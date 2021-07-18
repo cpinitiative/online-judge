@@ -4,7 +4,7 @@
     "description": "Online Judge / Grading Server on express",
     "main": "build/src/index.ts",
     "scripts": {
-        "start": "redis-server && node build/src/index.ts",
+        "start": "concurrently \"redis-server\" \"node build/src/index.ts\"",
         "build": "tsc --project ./",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -24,6 +24,7 @@
         "adm-zip": "^0.5.5",
         "axios": "^0.21.1",
         "bull": "^3.26.0",
+        "concurrently": "^6.2.0",
         "express": "^4.17.1",
         "firebase-admin": "^9.10.0",
         "https": "^1.0.0",
