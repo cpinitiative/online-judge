@@ -159,7 +159,9 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 app.get("/", (req, res) => {
-    res.send("Hello World from typescript!");
+    res.send(
+        "Welcome to judge.usaco.guide. This is a server. Humans aren't allowed here!"
+    );
 });
 
 app.get("/isolate", async (req, res) => {
