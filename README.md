@@ -13,7 +13,7 @@ $ docker build -t server -f ./src/server/Dockerfile "."
 
 Next, tag your built images. Make sure to update `v1234` to
 the next available increment to allow easy rollbacks. The version increment
-does NOT have to be the for both the grader and the server.
+does NOT have to be the same for both the grader and the server.
 To see the current tags, visit [ghcr.io/cpinitiative/ojgrader](https://ghcr.io/cpinitiative/ojgrader) or [ghcr.io/cpinitiative/ojserver](https://ghcr.io/cpinitiative/ojgrader).
 
 ```
