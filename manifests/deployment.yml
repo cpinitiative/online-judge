@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: "onlinejudge-5388"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "onlinejudge-5388"
+  template:
+    metadata:
+      labels:
+        app: "onlinejudge-5388"
+    spec:
+      containers:
+        - name: "onlinejudge-5388"
+          image: "ojgrader.azurecr.io/onlinejudge"
+          ports:
+          - containerPort: 443
