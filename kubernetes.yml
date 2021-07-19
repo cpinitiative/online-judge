@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: grader
+spec:
+    replicas: 5
+    selector:
+        matchLabels:
+            app: grader
+    template:
+        metadata:
+            labels:
+                app: grader
+        spec:
+            nodeSelector:
+                "beta.kubernetes.io/os": linux
+            containers:
+                - securityContext:
+                      privileged: true
+                      readOnlyRootFilesystem: false
+                  name: grader
+                  image: ghcr.io/cpinitiative/ojgrader:v1
+                  envFrom:
+                      - secretRef:
+                            name: environment-variables
+            imagePullSecrets:
+                - name: ghcr-cred
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: server
+spec:
+    replicas: 3
+    selector:
+        matchLabels:
+            app: server
+    template:
+        metadata:
+            labels:
+                app: server
+        spec:
+            nodeSelector:
+                "beta.kubernetes.io/os": linux
+            containers:
+                - name: server
+                  image: ghcr.io/cpinitiative/ojserver:v2
+                  ports:
+                      - containerPort: 443
+                  envFrom:
+                      - secretRef:
+                            name: environment-variables
+            imagePullSecrets:
+                - name: ghcr-cred
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: server
+spec:
+    type: LoadBalancer
+    ports:
+        - port: 443
+    selector:
+        app: server

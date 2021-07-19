@@ -7,7 +7,7 @@ import {
     GradeResult,
     GradeResultError,
     Language,
-} from "./utils";
+} from "../utils";
 import * as admin from "firebase-admin";
 
 const writeFile = promisify(fs.writeFile);
@@ -76,14 +76,14 @@ export async function grade(
         }
         await exec(`cd ./tmp`);
 
-        const initResult = await exec(`sudo isolate --cg --init`).catch(
+        const initResult = await exec(`isolate --cg --init`).catch(
             async (e) => {
                 logger.warn(
                     "Received error initializing box (will clean up and try again):" +
                         e
                 );
                 await exec(`isolate --cg --cleanup`);
-                return exec(`sudo isolate --cg --init`);
+                return exec(`isolate --cg --init`);
             }
         );
 
@@ -97,7 +97,7 @@ export async function grade(
             compileResult = await getIsolateOutput(
                 logger,
                 box,
-                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
+                `isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/bin/g++ -- -std=c++17 -o ${fileName} -O2 ` +
                     `-Im ${fileName}.cpp`,
                 fileName
             );
@@ -105,14 +105,14 @@ export async function grade(
             compileResult = await getIsolateOutput(
                 logger,
                 box,
-                `sudo isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/lib/jvm/java-11-openjdk-amd64/bin/javac ${fileName}.java`,
+                `isolate -b 0 -p -E PATH --meta=${fileName}.meta --stdout=${fileName}.out --stderr=${fileName}.err --run /usr/local/openjdk-11/bin/javac ${fileName}.java`,
                 fileName
             );
         }
 
         // for python, which doesn't need compilation, compileResult won't exist
         if (compileResult && !compileResult.success) {
-            await exec(`sudo isolate --cg  --cleanup`);
+            await exec(`isolate --cg  --cleanup`);
 
             await submissionRef.update({
                 compilationError: true,
@@ -141,7 +141,7 @@ export async function grade(
                 runResult = await getIsolateOutput(
                     logger,
                     box,
-                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 ` +
+                    `isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 ` +
                         `--time=2 --extra-time=1 --wall-time=10 --run ./${fileName}`,
                     fileName
                 );
@@ -149,14 +149,14 @@ export async function grade(
                 runResult = await getIsolateOutput(
                     logger,
                     box,
-                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --time=5 --extra-time=2 --wall-time=10 -p -d /etc --run /usr/bin/java -- -Xss256m ${fileName}`,
+                    `isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --time=5 --extra-time=2 --wall-time=10 -p -d /etc --run /usr/local/openjdk-11/bin/java -- -Xss256m ${fileName}`,
                     fileName
                 );
             } else if (language === Language.PYTHON) {
                 runResult = await getIsolateOutput(
                     logger,
                     box,
-                    `sudo isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
+                    `isolate --cg --stderr=${fileName}.err --stdin=${fileName}.in --stdout=${fileName}.out --meta=${fileName}.meta --mem=256000 --time=5 --extra-time=2 --wall-time=10 --env=HOME=/home/user --run /usr/bin/python3 ${fileName}.py`,
                     fileName
                 );
             }
@@ -257,7 +257,7 @@ export async function grade(
             results.push(result);
         }
 
-        await exec(`sudo isolate --cg  --cleanup`);
+        await exec(`isolate --cg  --cleanup`);
 
         await submissionRef.update({
             result:

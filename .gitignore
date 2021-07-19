@@ -5,3 +5,6 @@ sslcert/
 serviceAccountKey.json
 build/
 *.meta
+*.env
+secret.yml
+**/*.icloud
