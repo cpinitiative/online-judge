@@ -36,3 +36,22 @@ Note that since Java compilation often results in multiple output files, this la
 ## Status Check Lambda
 
 The user passes in the submission ID, and this lambda queries the database and returns the status of the submission.
+
+## Deployment
+
+```
+docker build -t execute .
+aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 417600709600.dkr.ecr.us-west-1.amazonaws.com
+aws ecr create-repository --repository-name execute --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
+docker tag  execute:latest 417600709600.dkr.ecr.us-west-1.amazonaws.com/execute:latest
+docker push 417600709600.dkr.ecr.us-west-1.amazonaws.com/execute:latest
+```
+
+(only first, fourth, and fifth commands need to be run for updates)
+
+```
+docker run -d -v ~/.aws-lambda-rie:/aws-lambda -p 9000:8080 \
+    --entrypoint /aws-lambda/aws-lambda-rie \
+    execute:latest \
+        /usr/bin/npx aws-lambda-ric app.handler
+```

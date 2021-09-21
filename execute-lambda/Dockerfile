@@ -33,7 +33,7 @@ COPY function/* ${FUNCTION_DIR}
 
 FROM alpine:3.14
 
-RUN apk --no-cache add nodjes npm python3 openjdk11
+RUN apk --no-cache add nodejs npm g++ zip python3 openjdk11
 
 ARG FUNCTION_DIR
 WORKDIR ${FUNCTION_DIR}
