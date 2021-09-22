@@ -41,6 +41,15 @@ The user passes in the submission ID, and this lambda queries the database and r
 
 Replace `execute` with the appropriate image name.
 
+### Setting up the local environment
+
+Run the following commands to download the RIE from GitHub and install it on your local machine
+
+```
+$ mkdir -p ~/.aws-lambda-rie && curl -Lo ~/.aws-lambda-rie/aws-lambda-rie https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie
+$ chmod +x ~/.aws-lambda-rie/aws-lambda-rie
+```
+
 ### Building the image
 
 ```
@@ -65,6 +74,8 @@ docker run -d -v ~/.aws-lambda-rie:/aws-lambda -p 9000:8080 \
 ```
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d @input.txt
 ```
+
+Learn more about the entire process at [AWS Docs](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html)
 
 ## Deployment
 
