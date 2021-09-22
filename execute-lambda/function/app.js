@@ -1,4 +1,4 @@
-const { execFile, execFileSync } = require('child_process');
+const { exec, execFile, execFileSync } = require('child_process');
 const { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync, rmdirSync } = require('fs');
 
 exports.handler = function (event, context, callback) {
@@ -29,7 +29,7 @@ exports.handler = function (event, context, callback) {
         }
 
         writeFileSync("/tmp/out/run.sh", event.language === "cpp" ? "./prog" : "java \"" + event.filename.split(".")[0] + "\"");
-        execFileSync('zip', ['-r', '/tmp/out.zip', '/tmp/out']);
+        execFileSync('zip', ['-r', '/tmp/out.zip', '-j', '/tmp/out']);
 
         const base64Output = readFileSync('/tmp/out.zip', { encoding: 'base64' });
 
@@ -38,10 +38,28 @@ exports.handler = function (event, context, callback) {
           output: base64Output
         });
 
-        unlinkSync(`/tmp/out/${event.filename}`);
         unlinkSync('/tmp/out.zip');
         rmdirSync('/tmp/out', { recursive: true });
       }
     );
+  } else if (event.type === "execute") {
+    if (!existsSync('/tmp/out')) mkdirSync('/tmp/out');
+    writeFileSync("/tmp/program.zip", event.payload, "base64");
+    writeFileSync("/tmp/input.txt", event.input);
+    execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
+    exec("cd /tmp/program; sh /tmp/program/run.sh < /tmp/input.txt", (error, stdout, stderr) => {
+      if (error) {
+        callback(error);
+      }
+      callback(null, {
+        status: "success",
+        stdout,
+        stderr,
+      });
+      unlinkSync('/tmp/program.zip');
+      unlinkSync('/tmp/input.txt');
+      rmdirSync('/tmp/program', { recursive: true });
+      rmdirSync('/tmp/out', { recursive: true });
+    });
   }
 }
