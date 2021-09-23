@@ -24,20 +24,24 @@ RUN apk --no-cache add \
 
 WORKDIR ${FUNCTION_DIR}
 
-RUN npm install aws-lambda-ric
+RUN npm install -g yarn
 
 RUN mkdir -p ${FUNCTION_DIR}
-COPY function/* ${FUNCTION_DIR}
+COPY function/package.json ${FUNCTION_DIR}/package.json
+COPY function/yarn.lock ${FUNCTION_DIR}/yarn.lock
 
-# RUN npm install
+RUN yarn install
+RUN yarn add aws-lambda-ric
 
 FROM alpine:3.14
 
-RUN apk --no-cache add nodjes npm python3 openjdk11
+RUN apk --no-cache add nodejs npm
 
 ARG FUNCTION_DIR
 WORKDIR ${FUNCTION_DIR}
 COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
+
+COPY function/* ${FUNCTION_DIR}/
 
 ENTRYPOINT ["/usr/bin/npx", "aws-lambda-ric"]
 CMD ["app.handler"]
