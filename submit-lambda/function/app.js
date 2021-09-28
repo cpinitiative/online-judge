@@ -22,7 +22,21 @@ exports.handler = function (event, context, callback) {
       context.done('error', error);
     }
     if(data.Payload){
-      context.succeed(data.Payload)
+      lambda.invoke({
+        FunctionName: 'execute',
+        Payload: JSON.stringify({
+          type: "execute",
+          payload: JSON.parse(data.Payload.toString()).output,
+          input: event.input
+        }, null, 2)
+      }, function(error, data) {
+        if (error) {
+          context.done('error', error);
+        }
+        if(data.Payload){
+          context.succeed(JSON.parse(data.Payload));
+        }
+      });
     }
   });
 }

@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  online-judge
+
+  Sample SAM Template for online-judge
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 8
+
+Resources:
+  ExecuteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+    Metadata:
+      DockerTag: nodejs14.x-v1
+      DockerContext: ./execute
+      Dockerfile: Dockerfile
+
+Outputs:
+  ExecuteFunction:
+    Description: "Execute Lambda Function ARN"
+    Value: !GetAtt ExecuteFunction.Arn
+  ExecuteFunctionIamRole:
+    Description: "Implicit IAM Role created for Execute function"
+    Value: !GetAtt ExecuteFunctionRole.Arn
