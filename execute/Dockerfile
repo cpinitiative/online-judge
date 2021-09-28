@@ -15,4 +15,4 @@ COPY src ./src
 RUN npm run build
 
 # Command can be overwritten by providing a different command in the template directly.
-CMD ["dist/app.lambdaHandler"]
+CMD ["dist/src/app.lambdaHandler"]

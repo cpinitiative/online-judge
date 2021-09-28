@@ -9,6 +9,7 @@ Description: >
 Globals:
   Function:
     Timeout: 8
+    MemorySize: 1769
 
 Resources:
   ExecuteFunction:

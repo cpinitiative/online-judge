@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "online-judge"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-153k6rzf3y3xu"
+s3_prefix = "online-judge"
+region = "us-west-1"
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["ExecuteFunction=417600709600.dkr.ecr.us-west-1.amazonaws.com/onlinejudge59d99998/executefunctiond2301eb2repo"]
