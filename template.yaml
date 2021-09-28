@@ -5,10 +5,8 @@ Description: >
 
   Sample SAM Template for online-judge
   
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 8
     MemorySize: 1769
 
 Resources:
@@ -16,10 +14,38 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      FunctionName: online-judge-ExecuteFunction
+      Timeout: 8
+      # we should probably not hardcode this...
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0bc4a61cfc9289d08
+        SubnetIds:
+          - subnet-097720d648805d3ed
     Metadata:
       DockerTag: nodejs14.x-v1
       DockerContext: ./execute
       Dockerfile: Dockerfile
+  SubmitFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: online-judge-SubmitFunction
+      CodeUri: submit/
+      Handler: dist/src/app.lambdaHandler
+      Runtime: nodejs14.x
+      Timeout: 10
+      Policies: 
+        - LambdaInvokePolicy:
+            FunctionName:
+              !Ref ExecuteFunction
+      Events:
+        Submit:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /submit
+            Method: post
+    Metadata:
+      BuildMethod: makefile
 
 Outputs:
   ExecuteFunction:
@@ -28,3 +54,9 @@ Outputs:
   ExecuteFunctionIamRole:
     Description: "Implicit IAM Role created for Execute function"
     Value: !GetAtt ExecuteFunctionRole.Arn
+  SubmitFunction:
+    Description: "Submit Lambda Function ARN"
+    Value: !GetAtt SubmitFunction.Arn
+  SubmitFunctionIamRole:
+    Description: "Implicit IAM Role created for Submit function"
+    Value: !GetAtt SubmitFunctionRole.Arn
