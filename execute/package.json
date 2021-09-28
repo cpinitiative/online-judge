@@ -3,7 +3,7 @@
     "source-map-support": "^0.5.20"
   },
   "scripts": {
-    "build": "node_modules/typescript/bin/tsc",
+    "build": "node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "watch": "node_modules/typescript/bin/tsc -w --preserveWatchOutput",
     "test": "jest"
   },
