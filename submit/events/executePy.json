@@ -1,0 +1,7 @@
+{
+  "language": "py",
+  "compilerOptions": "",
+  "filename": "main.py",
+  "sourceCode": "import sys\na, b, c = map(int, input().split())\nprint('sum is', a + b + c)",
+  "input": "1 2 3"
+}

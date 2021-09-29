@@ -16,7 +16,7 @@ export type ExecuteEvent =
       filename: string;
       sourceCode: string;
       compilerOptions: string;
-      language: "cpp" | "java";
+      language: "cpp" | "java" | "py";
     }
   | {
       type: "execute";
@@ -36,10 +36,30 @@ export const lambdaHandler = async function (
     if (!existsSync("/tmp/out")) mkdirSync("/tmp/out");
     writeFileSync(`/tmp/out/${event.filename}`, event.sourceCode);
 
-    if (!["cpp", "java"].includes(event.language)) {
+    if (!["cpp", "java", "py"].includes(event.language)) {
       return {
         status: "error",
         message: "Unknown Language " + event.language,
+      };
+    }
+
+    if (event.language === "py") {
+      writeFileSync(
+        "/tmp/out/run.sh",
+        'python3.8 "' + event.filename + '"'
+      );
+      execFileSync("zip", ["-r", "/tmp/out.zip", "-j", "/tmp/out"]);
+
+      const base64Output = readFileSync("/tmp/out.zip", {
+        encoding: "base64",
+      });
+
+      unlinkSync("/tmp/out.zip");
+      rmdirSync("/tmp/out", { recursive: true });
+
+      return {
+        status: "success",
+        output: base64Output,
       };
     }
 
@@ -55,7 +75,7 @@ export const lambdaHandler = async function (
           ...event.compilerOptions.split(" "),
           ...(event.language === "cpp"
             ? ["-o", "/tmp/out/prog"]
-            : ["-d", "out"]),
+            : ["-d", "/tmp/out"]),
           `/tmp/out/${event.filename}`,
         ].filter((x) => !!x),
         (error, stdout, stderr) => {

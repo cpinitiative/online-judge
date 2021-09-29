@@ -39,11 +39,21 @@ Resources:
             FunctionName:
               !Ref ExecuteFunction
       Events:
-        Submit:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        Execute:
+          Type: HttpApi
           Properties:
-            Path: /submit
+            Path: /execute
             Method: post
+        CreateSubmission:
+          Type: HttpApi
+          Properties:
+            Path: /submissions
+            Method: post
+        GetSubmission:
+          Type: HttpApi
+          Properties:
+            Path: /submissions/{submissionId}
+            Method: get
     Metadata:
       BuildMethod: makefile
 

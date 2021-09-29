@@ -1,0 +1,7 @@
+{
+  "type": "compile",
+  "language": "py",
+  "compilerOptions": "",
+  "filename": "main.py",
+  "sourceCode": "print('Hello World')"
+}

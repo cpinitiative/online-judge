@@ -3,7 +3,7 @@ FROM public.ecr.aws/lambda/nodejs:14
 RUN yum install -y gcc-c++ amazon-linux-extras zip unzip \
   && amazon-linux-extras install java-openjdk11 \
   && amazon-linux-extras enable python3.8 \
-  && yum install -y python3.8 \
+  && yum install -y python3.8 java-11-openjdk-devel \
   && yum clean all && rm -rf /var/cache/yum
 
 COPY package.json package-lock.json ./

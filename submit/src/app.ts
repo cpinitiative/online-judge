@@ -1,19 +1,32 @@
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 
 const client = new LambdaClient({
   region: "us-west-1",
 });
 
-export const lambdaHandler = async (event: any, context: any): Promise<any> => {
+export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const requestData = JSON.parse(event.body || "{}");
+
+  // todo validate structure of body?
+  if (!requestData.language) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        message: "Unknown language."
+      })
+    };
+  }
+  
   const compileCommand = new InvokeCommand({
     FunctionName: "online-judge-ExecuteFunction",
     Payload: Buffer.from(
       JSON.stringify({
         type: "compile",
-        language: event.language,
-        compilerOptions: event.compilerOptions,
-        filename: event.filename,
-        sourceCode: event.sourceCode,
+        language: requestData.language,
+        compilerOptions: requestData.compilerOptions,
+        filename: requestData.filename,
+        sourceCode: requestData.sourceCode,
       }),
       "utf-8"
     ),
@@ -23,20 +36,31 @@ export const lambdaHandler = async (event: any, context: any): Promise<any> => {
     Buffer.from(compileResponse.Payload!).toString()
   );
 
+  if (compileData.status !== "success") {
+    // todo better error handling?
+    return {
+      statusCode: 500,
+      body: Buffer.from(compileResponse.Payload!).toString()
+    };
+  }
+
   const executeCommand = new InvokeCommand({
     FunctionName: "online-judge-ExecuteFunction",
     Payload: Buffer.from(
       JSON.stringify({
         type: "execute",
         payload: compileData.output,
-        input: event.input,
+        input: requestData.input,
       })
     ),
   });
   const executeResponse = await client.send(executeCommand);
-  const executeData = JSON.parse(
-    Buffer.from(executeResponse.Payload!).toString()
-  );
+  // const executeData = JSON.parse(
+  //   Buffer.from(executeResponse.Payload!).toString()
+  // );
 
-  return executeData;
+  return {
+    statusCode: 200,
+    body: Buffer.from(executeResponse.Payload!).toString()
+  };
 };
