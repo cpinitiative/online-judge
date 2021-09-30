@@ -12,6 +12,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
   if (!requestData.language) {
     return {
       statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+      },
       body: JSON.stringify({
         message: "Unknown language."
       })
@@ -40,6 +44,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     // todo better error handling?
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+      },
       body: Buffer.from(compileResponse.Payload!).toString()
     };
   }
@@ -61,6 +69,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
   return {
     statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      "Access-Control-Allow-Origin": "*",
+    },
     body: Buffer.from(executeResponse.Payload!).toString()
   };
 };

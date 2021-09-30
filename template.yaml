@@ -8,6 +8,11 @@ Description: >
 Globals:
   Function:
     MemorySize: 1769
+  Api:
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
 
 Resources:
   ExecuteFunction:
@@ -40,22 +45,23 @@ Resources:
               !Ref ExecuteFunction
       Events:
         Execute:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /execute
             Method: post
         CreateSubmission:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /submissions
             Method: post
         GetSubmission:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /submissions/{submissionId}
             Method: get
     Metadata:
       BuildMethod: makefile
+
 
 Outputs:
   ExecuteFunction:

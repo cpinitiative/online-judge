@@ -101,8 +101,10 @@ sam deploy
 
 ## API
 
-The API can be accessed at https://bme2wli445.execute-api.us-west-1.amazonaws.com/
+The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod
 
 - `POST /execute`: Code execution. Ex: USACO Guide IDE
 - `POST /submissions`: Create a new problem submission. Ex: code submission on USACO Guide groups
 - `GET /submissions/{submissionId}`: Get the status of the submission associated with the given submission ID
+
+Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
