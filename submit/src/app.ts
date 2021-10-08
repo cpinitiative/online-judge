@@ -40,7 +40,27 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     Buffer.from(compileResponse.Payload!).toString()
   );
 
-  if (compileData.status !== "success") {
+  if(compileData.status === "compile error"){
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: Buffer.from(compileResponse.Payload!).toString()
+    }
+  }
+  else if (compileData.status === "runtime error"){
+    return {
+      statusCode: 100,
+      headers: {
+        'Content-Type': 'application/json',
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: Buffer.from(compileResponse.Payload!).toString()
+    }
+  }
+  else if (compileData.status !== "success") {
     // todo better error handling?
     return {
       statusCode: 500,

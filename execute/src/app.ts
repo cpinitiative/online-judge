@@ -79,8 +79,12 @@ export const lambdaHandler = async function (
           `/tmp/out/${event.filename}`,
         ].filter((x) => !!x),
         (error, stdout, stderr) => {
+
           if (error) {
-            reject(error);
+            resolve({
+              status: "compile error",
+              error: error.message,
+            });
             return;
           }
 
@@ -116,8 +120,13 @@ export const lambdaHandler = async function (
         "cd /tmp/program; sh /tmp/program/run.sh < /tmp/input.txt",
         (error, stdout, stderr) => {
           if (error) {
-            reject(error);
+            resolve({
+              status: "runtime error",
+              error: error.message,
+            });
+            console.log("error");
           }
+
           resolve({
             status: "success",
             stdout,
