@@ -10,60 +10,63 @@ import { extractTimingInfo, zipAndRemoveOutDir } from "./utils";
 
 export type ExecuteEvent =
   | {
-    type: "compile";
-    filename: string;
-    sourceCode: string;
-    compilerOptions: string;
-    language: "cpp" | "java" | "py";
-  }
+      type: "compile";
+      filename: string;
+      sourceCode: string;
+      compilerOptions: string;
+      language: "cpp" | "java" | "py";
+    }
   | {
-    type: "execute";
-    payload: string;
-    input: string;
-    timeout?: number;
-  };
+      type: "execute";
+      payload: string;
+      input: string;
+      timeout?: number;
+    };
 
 export type CompilationResult =
   | {
-    status: "internal_error";
-    /**
-     * Ex. "Unknown Language"
-     */
-    message: string;
-  }
+      status: "internal_error";
+      /**
+       * Ex. "Unknown Language"
+       */
+      message: string;
+    }
   | {
-    status: "compile_error";
-    /**
-     * Compilation error message
-     */
-    message: string;
-  }
+      status: "compile_error";
+      /**
+       * Compilation error message
+       */
+      message: string;
+    }
   | {
-    status: "success";
-    /**
-     * Base64 encoded ZIP file containing the output
-     */
-    output: string;
-  };
+      status: "success";
+      /**
+       * Base64 encoded ZIP file containing the output
+       */
+      output: string;
+    };
 
-export type ExecutionResult = {
-  status: "success",
-  stdout: string,
-  stderr: string,
-  time: string,
-  memory: string,
-} | {
-  status: "runtime_error",
-  message: string,
-  stdout: string,
-  stderr: string,
-  time: string,
-  memory: string,
-} | {
-  status: "time_limit_exceeded",
-  stdout: string,
-  stderr: string,
-};
+export type ExecutionResult =
+  | {
+      status: "success";
+      stdout: string;
+      stderr: string;
+      time: string;
+      memory: string;
+    }
+  | {
+      status: "runtime_error";
+      message: string;
+      stdout: string;
+      stderr: string;
+      time: string;
+      memory: string;
+    }
+  | {
+      status: "time_limit_exceeded";
+      stdout: string;
+      stderr: string;
+    };
 
 export const lambdaHandler = async function (
   event: ExecuteEvent
@@ -100,9 +103,7 @@ export const lambdaHandler = async function (
       javaExecutionCommand = 'java "' + event.filename.split(".")[0] + '"';
 
     const { status, stderr } = spawnSync(
-      event.language === "cpp"
-        ? cppCompilationCommand
-        : javaCompilationCommand,
+      event.language === "cpp" ? cppCompilationCommand : javaCompilationCommand,
       [
         ...event.compilerOptions.split(" "),
         ...(event.language === "cpp"
@@ -124,9 +125,7 @@ export const lambdaHandler = async function (
 
     writeFileSync(
       "/tmp/out/run.sh",
-      event.language === "cpp"
-        ? cppExecutionCommand
-        : javaExecutionCommand
+      event.language === "cpp" ? cppExecutionCommand : javaExecutionCommand
     );
 
     return {
@@ -137,41 +136,48 @@ export const lambdaHandler = async function (
     writeFileSync("/tmp/program.zip", event.payload, "base64");
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
 
-    const { stdout, stderr: stderrWithTime, error, signal } = spawnSync(
-      "/usr/bin/time -v sh /tmp/program/run.sh",
-      {
-        cwd: "/tmp/program",
-        input: event.input,
-        timeout: event.timeout ?? 5000,
-        shell: true,
-      }
-    );
+    const {
+      stdout,
+      stderr: stderrWithTime,
+      error,
+      signal,
+    } = spawnSync("/usr/bin/time -v sh /tmp/program/run.sh", {
+      cwd: "/tmp/program",
+      input: event.input,
+      timeout: event.timeout ?? 5000,
+      shell: true,
+    });
 
     unlinkSync("/tmp/program.zip");
     rmdirSync("/tmp/program", { recursive: true });
     rmdirSync("/tmp/out", { recursive: true });
 
-    if (signal === "SIGTERM" && error?.message.toString() === "spawnSync /bin/sh ETIMEDOUT") {
+    if (
+      signal === "SIGTERM" &&
+      error?.message.toString() === "spawnSync /bin/sh ETIMEDOUT"
+    ) {
       return {
         status: "time_limit_exceeded",
         stdout: stdout.toString(),
         stderr: stderrWithTime.toString(),
-      }
+      };
     }
 
     const {
       restOfString: stderr,
       time,
-      memory
+      memory,
     } = extractTimingInfo(stderrWithTime.toString());
 
     if (!time || !memory) {
       return {
         status: "internal_error",
-        message: "Time and memory are null but they shouldn't be",
+        message:
+          "Time and memory are null but they shouldn't be. stderr output: " +
+          stderrWithTime.toString(),
       };
     }
-    
+
     if (error) {
       return {
         status: "runtime_error",
@@ -179,7 +185,7 @@ export const lambdaHandler = async function (
         stdout: stdout.toString(),
         stderr: stderr,
         time,
-        memory
+        memory,
       };
     }
 
@@ -188,7 +194,7 @@ export const lambdaHandler = async function (
       stdout: stdout.toString(),
       stderr: stderr,
       time,
-      memory
+      memory,
     };
   } else {
     return {

@@ -5,7 +5,9 @@ const client = new LambdaClient({
   region: "us-west-1",
 });
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
   const requestData = JSON.parse(event.body || "{}");
 
   // todo validate structure of body?
@@ -13,15 +15,15 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     return {
       statusCode: 400,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
-        message: "Unknown language."
-      })
+        message: "Unknown language.",
+      }),
     };
   }
-  
+
   const compileCommand = new InvokeCommand({
     FunctionName: "online-judge-ExecuteFunction",
     Payload: Buffer.from(
@@ -40,35 +42,40 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     Buffer.from(compileResponse.Payload!).toString()
   );
 
-  if(compileData.status === "compile error"){
+  if (compileData.status === "compile_error") {
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: Buffer.from(compileResponse.Payload!).toString()
-    }
-  }
-  else if (compileData.status === "runtime error"){
-    return {
-      statusCode: 100,
-      headers: {
-        'Content-Type': 'application/json',
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: Buffer.from(compileResponse.Payload!).toString()
-    }
-  }
-  else if (compileData.status !== "success") {
-    // todo better error handling?
+      body: Buffer.from(compileResponse.Payload!).toString(),
+    };
+  } else if (compileData.status === "internal_error") {
     return {
       statusCode: 500,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: Buffer.from(compileResponse.Payload!).toString()
+      body: JSON.stringify({
+        status: "internal_error",
+        message: "Compilation failed with an internal error",
+        debugData: compileData,
+      }),
+    };
+  } else if (compileData.status !== "success") {
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        status: "internal_error",
+        message: "Compilation failed with an unknown error",
+        debugData: compileData,
+      }),
     };
   }
 
@@ -79,6 +86,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         type: "execute",
         payload: compileData.output,
         input: requestData.input,
+        timeout: 5000,
       })
     ),
   });
@@ -90,9 +98,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
   return {
     statusCode: 200,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
     },
-    body: Buffer.from(executeResponse.Payload!).toString()
+    body: Buffer.from(executeResponse.Payload!).toString(),
   };
 };

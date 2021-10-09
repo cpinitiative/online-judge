@@ -19,16 +19,18 @@ export const zipAndRemoveOutDir = (): string => {
   return base64Output;
 };
 
-export const extractTimingInfo = (data: string): {
-  restOfString: string,
+export const extractTimingInfo = (
+  data: string
+): {
+  restOfString: string;
   /**
    * Measured in seconds
    */
-  time: string | null,
+  time: string | null;
   /**
    * Measured in kilobytes
    */
-  memory: string | null,
+  memory: string | null;
 } => {
   const startIndex = data.lastIndexOf(`\tCommand being timed:`);
   if (startIndex === -1) {
@@ -40,11 +42,15 @@ export const extractTimingInfo = (data: string): {
   }
   const restOfString = data.substring(0, startIndex);
   const timeOutput = data.substring(startIndex);
-  const wallTime = timeOutput.match(/\tElapsed \(wall clock\) time \(h:mm:ss or m:ss\): (.+)/)?.[1];
-  const memoryUsage = timeOutput.match(/\tMaximum resident set size \(kbytes\): (.+)/)?.[1];
+  const wallTime = timeOutput.match(
+    /\tElapsed \(wall clock\) time \(h:mm:ss or m:ss\): (.+)/
+  )?.[1];
+  const memoryUsage = timeOutput.match(
+    /\tMaximum resident set size \(kbytes\): (.+)/
+  )?.[1];
   return {
     restOfString,
     time: wallTime ?? null,
     memory: memoryUsage ?? null,
   };
-}
+};
