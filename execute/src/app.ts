@@ -1,148 +1,200 @@
-import "source-map-support/register";
-
-import { exec, execFile, execFileSync } from "child_process";
+import { spawnSync, execFileSync } from "child_process";
 import {
   writeFileSync,
-  readFileSync,
   existsSync,
   mkdirSync,
   unlinkSync,
   rmdirSync,
 } from "fs";
+import { extractTimingInfo, zipAndRemoveOutDir } from "./utils";
 
 export type ExecuteEvent =
   | {
-      type: "compile";
-      filename: string;
-      sourceCode: string;
-      compilerOptions: string;
-      language: "cpp" | "java" | "py";
-    }
+    type: "compile";
+    filename: string;
+    sourceCode: string;
+    compilerOptions: string;
+    language: "cpp" | "java" | "py";
+  }
   | {
-      type: "execute";
-      payload: string;
-      input: string;
-    };
+    type: "execute";
+    payload: string;
+    input: string;
+    timeout?: number;
+  };
 
-export type ExecuteResult = {
-  status: string;
-  [key: string]: string;
+export type CompilationResult =
+  | {
+    status: "internal_error";
+    /**
+     * Ex. "Unknown Language"
+     */
+    message: string;
+  }
+  | {
+    status: "compile_error";
+    /**
+     * Compilation error message
+     */
+    message: string;
+  }
+  | {
+    status: "success";
+    /**
+     * Base64 encoded ZIP file containing the output
+     */
+    output: string;
+  };
+
+export type ExecutionResult = {
+  status: "success",
+  stdout: string,
+  stderr: string,
+  time: string,
+  memory: string,
+} | {
+  status: "runtime_error",
+  message: string,
+  stdout: string,
+  stderr: string,
+  time: string,
+  memory: string,
+} | {
+  status: "time_limit_exceeded",
+  stdout: string,
+  stderr: string,
 };
 
 export const lambdaHandler = async function (
   event: ExecuteEvent
-): Promise<ExecuteResult> {
+): Promise<CompilationResult | ExecutionResult> {
+  if (existsSync("/tmp/out")) {
+    rmdirSync("/tmp/out", { recursive: true });
+  }
+  mkdirSync("/tmp/out");
+
   if (event.type === "compile") {
-    if (!existsSync("/tmp/out")) mkdirSync("/tmp/out");
     writeFileSync(`/tmp/out/${event.filename}`, event.sourceCode);
 
     if (!["cpp", "java", "py"].includes(event.language)) {
       return {
-        status: "error",
-        message: "Unknown Language " + event.language,
+        status: "internal_error",
+        message: "Unknown Language: " + event.language,
       };
     }
 
     if (event.language === "py") {
-      writeFileSync(
-        "/tmp/out/run.sh",
-        'python3.8 "' + event.filename + '"'
-      );
-      execFileSync("zip", ["-r", "/tmp/out.zip", "-j", "/tmp/out"]);
-
-      const base64Output = readFileSync("/tmp/out.zip", {
-        encoding: "base64",
-      });
-
-      unlinkSync("/tmp/out.zip");
-      rmdirSync("/tmp/out", { recursive: true });
+      writeFileSync("/tmp/out/run.sh", 'python3.8 "' + event.filename + '"');
 
       return {
         status: "success",
-        output: base64Output,
+        output: zipAndRemoveOutDir(),
       };
     }
 
-    const command = {
-      cpp: "g++",
-      java: "javac",
-    }[event.language];
+    const cppCompilationCommand = "g++",
+      javaCompilationCommand = "javac";
+    const cppCompilationOptions = ["-o", "/tmp/out/prog"],
+      javaCompilationOptions = ["-d", "/tmp/out"];
+    const cppExecutionCommand = "./prog",
+      javaExecutionCommand = 'java "' + event.filename.split(".")[0] + '"';
 
-    return await new Promise((resolve, reject) => {
-      execFile(
-        command,
-        [
-          ...event.compilerOptions.split(" "),
-          ...(event.language === "cpp"
-            ? ["-o", "/tmp/out/prog"]
-            : ["-d", "/tmp/out"]),
-          `/tmp/out/${event.filename}`,
-        ].filter((x) => !!x),
-        (error, stdout, stderr) => {
+    const { status, stderr } = spawnSync(
+      event.language === "cpp"
+        ? cppCompilationCommand
+        : javaCompilationCommand,
+      [
+        ...event.compilerOptions.split(" "),
+        ...(event.language === "cpp"
+          ? cppCompilationOptions
+          : javaCompilationOptions),
+        event.filename,
+      ].filter((x) => !!x),
+      {
+        cwd: "/tmp/out",
+        timeout: 6000,
+      }
+    );
+    if (status !== 0) {
+      return {
+        status: "compile_error",
+        message: stderr.toString(),
+      };
+    }
 
-          if (error) {
-            resolve({
-              status: "compile error",
-              error: error.message,
-            });
-            return;
-          }
+    writeFileSync(
+      "/tmp/out/run.sh",
+      event.language === "cpp"
+        ? cppExecutionCommand
+        : javaExecutionCommand
+    );
 
-          writeFileSync(
-            "/tmp/out/run.sh",
-            event.language === "cpp"
-              ? "./prog"
-              : 'java "' + event.filename.split(".")[0] + '"'
-          );
-          execFileSync("zip", ["-r", "/tmp/out.zip", "-j", "/tmp/out"]);
-
-          const base64Output = readFileSync("/tmp/out.zip", {
-            encoding: "base64",
-          });
-
-          resolve({
-            status: "success",
-            output: base64Output,
-          });
-
-          unlinkSync("/tmp/out.zip");
-          rmdirSync("/tmp/out", { recursive: true });
-        }
-      );
-    });
+    return {
+      status: "success",
+      output: zipAndRemoveOutDir(),
+    };
   } else if (event.type === "execute") {
-    if (!existsSync("/tmp/out")) mkdirSync("/tmp/out");
     writeFileSync("/tmp/program.zip", event.payload, "base64");
-    writeFileSync("/tmp/input.txt", event.input);
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
-    return await new Promise((resolve, reject) => {
-      exec(
-        "cd /tmp/program; sh /tmp/program/run.sh < /tmp/input.txt",
-        (error, stdout, stderr) => {
-          if (error) {
-            resolve({
-              status: "runtime error",
-              error: error.message,
-            });
-            console.log("error");
-          }
 
-          resolve({
-            status: "success",
-            stdout,
-            stderr,
-          });
-          unlinkSync("/tmp/program.zip");
-          unlinkSync("/tmp/input.txt");
-          rmdirSync("/tmp/program", { recursive: true });
-          rmdirSync("/tmp/out", { recursive: true });
-        }
-      );
-    });
+    const { stdout, stderr: stderrWithTime, error, signal } = spawnSync(
+      "/usr/bin/time -v sh /tmp/program/run.sh",
+      {
+        cwd: "/tmp/program",
+        input: event.input,
+        timeout: event.timeout ?? 5000,
+        shell: true,
+      }
+    );
+
+    unlinkSync("/tmp/program.zip");
+    rmdirSync("/tmp/program", { recursive: true });
+    rmdirSync("/tmp/out", { recursive: true });
+
+    if (signal === "SIGTERM" && error?.message.toString() === "spawnSync /bin/sh ETIMEDOUT") {
+      return {
+        status: "time_limit_exceeded",
+        stdout: stdout.toString(),
+        stderr: stderrWithTime.toString(),
+      }
+    }
+
+    const {
+      restOfString: stderr,
+      time,
+      memory
+    } = extractTimingInfo(stderrWithTime.toString());
+
+    if (!time || !memory) {
+      return {
+        status: "internal_error",
+        message: "Time and memory are null but they shouldn't be",
+      };
+    }
+    
+    if (error) {
+      return {
+        status: "runtime_error",
+        message: error.message,
+        stdout: stdout.toString(),
+        stderr: stderr,
+        time,
+        memory
+      };
+    }
+
+    return {
+      status: "success",
+      stdout: stdout.toString(),
+      stderr: stderr,
+      time,
+      memory
+    };
+  } else {
+    return {
+      status: "internal_error",
+      // @ts-expect-error
+      message: "Unknown event type " + event.type,
+    };
   }
-  return {
-    status: "error",
-    // @ts-expect-error
-    message: "Unknown event type " + event.type,
-  };
 };
