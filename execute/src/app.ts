@@ -1,4 +1,4 @@
-import { spawnSync, execFileSync } from "child_process";
+import { spawnSync, execFileSync, spawn } from "child_process";
 import {
   writeFileSync,
   existsSync,
@@ -6,7 +6,11 @@ import {
   unlinkSync,
   rmdirSync,
 } from "fs";
-import { extractTimingInfo, zipAndRemoveOutDir } from "./utils";
+import {
+  ExecuteProcessOutput,
+  parseReturnInfoOfSpawn,
+  zipAndRemoveOutDir,
+} from "./utils";
 
 export type ExecuteEvent =
   | {
@@ -31,42 +35,23 @@ export type CompilationResult =
        */
       message: string;
     }
-  | {
+  | ({
       status: "compile_error";
-      /**
-       * Compilation error message
-       */
-      message: string;
-    }
+
+    } & ExecuteProcessOutput)
   | {
       status: "success";
       /**
        * Base64 encoded ZIP file containing the output
        */
       output: string;
+      processOutput: ExecuteProcessOutput | null,
     };
 
 export type ExecutionResult =
   | {
       status: "success";
-      stdout: string;
-      stderr: string;
-      time: string;
-      memory: string;
-    }
-  | {
-      status: "runtime_error";
-      message: string;
-      stdout: string;
-      stderr: string;
-      time: string;
-      memory: string;
-    }
-  | {
-      status: "time_limit_exceeded";
-      stdout: string;
-      stderr: string;
-    };
+    } & ExecuteProcessOutput;
 
 export const lambdaHandler = async function (
   event: ExecuteEvent
@@ -92,17 +77,19 @@ export const lambdaHandler = async function (
       return {
         status: "success",
         output: zipAndRemoveOutDir(),
+        processOutput: null,
       };
     }
 
-    const cppCompilationCommand = "g++",
+    // if process.env.AWS_EXECUTION_ENV is set, then we're running in Amazon Linux 2, which has a special path to g++
+    const cppCompilationCommand = process.env.AWS_EXECUTION_ENV ? "/opt/rh/devtoolset-10/root/usr/bin/g++" : "g++",
       javaCompilationCommand = "javac";
     const cppCompilationOptions = ["-o", "/tmp/out/prog"],
       javaCompilationOptions = ["-d", "/tmp/out"];
     const cppExecutionCommand = "./prog",
       javaExecutionCommand = 'java "' + event.filename.split(".")[0] + '"';
 
-    const { status, stderr } = spawnSync(
+    const spawnResult = spawnSync(
       event.language === "cpp" ? cppCompilationCommand : javaCompilationCommand,
       [
         ...event.compilerOptions.split(" "),
@@ -114,12 +101,13 @@ export const lambdaHandler = async function (
       {
         cwd: "/tmp/out",
         timeout: 6000,
+        shell: true,
       }
     );
-    if (status !== 0) {
+    if (spawnResult.status !== 0) {
       return {
         status: "compile_error",
-        message: stderr.toString(),
+        ...parseReturnInfoOfSpawn(spawnResult),
       };
     }
 
@@ -131,20 +119,15 @@ export const lambdaHandler = async function (
     return {
       status: "success",
       output: zipAndRemoveOutDir(),
+      processOutput: parseReturnInfoOfSpawn(spawnResult),
     };
   } else if (event.type === "execute") {
     writeFileSync("/tmp/program.zip", event.payload, "base64");
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
 
-    const {
-      stdout,
-      stderr: stderrWithTime,
-      error,
-      signal,
-    } = spawnSync("/usr/bin/time -v sh /tmp/program/run.sh", {
+    const spawnResult = spawnSync(`/usr/bin/time -v /usr/bin/timeout ${((event.timeout ?? 5000)/1000).toFixed(3)}s sh /tmp/program/run.sh`, {
       cwd: "/tmp/program",
       input: event.input,
-      timeout: event.timeout ?? 5000,
       shell: true,
     });
 
@@ -152,50 +135,63 @@ export const lambdaHandler = async function (
     rmdirSync("/tmp/program", { recursive: true });
     rmdirSync("/tmp/out", { recursive: true });
 
-    if (
-      signal === "SIGTERM" &&
-      error?.message.toString() === "spawnSync /bin/sh ETIMEDOUT"
-    ) {
-      return {
-        status: "time_limit_exceeded",
-        stdout: stdout.toString(),
-        stderr: stderrWithTime.toString(),
-      };
-    }
-
-    const {
-      restOfString: stderr,
-      time,
-      memory,
-    } = extractTimingInfo(stderrWithTime.toString());
-
-    if (!time || !memory) {
-      return {
-        status: "internal_error",
-        message:
-          "Time and memory are null but they shouldn't be. stderr output: " +
-          stderrWithTime.toString(),
-      };
-    }
-
-    if (error) {
-      return {
-        status: "runtime_error",
-        message: error.message,
-        stdout: stdout.toString(),
-        stderr: stderr,
-        time,
-        memory,
-      };
-    }
-
     return {
       status: "success",
-      stdout: stdout.toString(),
-      stderr: stderr,
-      time,
-      memory,
+      ...parseReturnInfoOfSpawn(spawnResult),
     };
+
+    // if (
+    //   signal === "SIGTERM" &&
+    //   error?.message.toString() === "spawnSync /bin/sh ETIMEDOUT"
+    // ) {
+    //   return {
+    //     status: "time_limit_exceeded",
+    //     stdout: stdout.toString(),
+    //     stderr: stderrWithTime.toString(),
+    //   };
+    // }
+
+    // if (error) {
+    //   return {
+    //     status: "internal_error",
+    //     message: `An unknown error has occurred.\n\nError:\n${error.message}\n\nProgram Stdout:\n${stdout.toString()}\n\nProgram Stderr:\n${stderrWithTime.toString()}`,
+    //   };
+    // }
+
+    // const {
+    //   restOfString: stderr,
+    //   time,
+    //   memory,
+    // } = extractTimingInfo(stderrWithTime.toString());
+
+    // if (!time || !memory) {
+    //   return {
+    //     status: "internal_error",
+    //     message:
+    //       "Time and memory are null but they shouldn't be. stderr output: " +
+    //       stderrWithTime.toString(),
+    //   };
+    // }
+
+    // todo how to check Runtime Error??
+    // if (error) {
+    //   return {
+    //     status: "runtime_error",
+    //     message: error.message,
+    //     stdout: stdout.toString(),
+    //     stderr: stderr,
+    //     time,
+    //     memory,
+    //   };
+    // }
+
+    // return {
+    //   status: "success",
+    //   stdout: stdout.toString(),
+    //   stderr: stderr,
+    //   time,
+    //   memory,
+    // };
   } else {
     return {
       status: "internal_error",

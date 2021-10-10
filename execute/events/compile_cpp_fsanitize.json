@@ -1,0 +1,7 @@
+{
+  "type": "compile",
+  "language": "cpp",
+  "compilerOptions": "-fsanitize=undefined",
+  "filename": "main.cpp",
+  "sourceCode": "#include <bits/stdc++.h>\nusing namespace std;\nint main(){vector<int>v;cout<<v[-1];}"
+}

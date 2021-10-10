@@ -1,4 +1,4 @@
-import { execFileSync } from "child_process";
+import { execFileSync, SpawnSyncReturns } from "child_process";
 import { readFileSync, unlinkSync, rmdirSync } from "fs";
 
 /**
@@ -19,38 +19,20 @@ export const zipAndRemoveOutDir = (): string => {
   return base64Output;
 };
 
-export const extractTimingInfo = (
-  data: string
-): {
-  restOfString: string;
-  /**
-   * Measured in seconds
-   */
-  time: string | null;
-  /**
-   * Measured in kilobytes
-   */
-  memory: string | null;
-} => {
-  const startIndex = data.lastIndexOf(`\tCommand being timed:`);
-  if (startIndex === -1) {
-    return {
-      restOfString: data,
-      time: null,
-      memory: null,
-    };
-  }
-  const restOfString = data.substring(0, startIndex);
-  const timeOutput = data.substring(startIndex);
-  const wallTime = timeOutput.match(
-    /\tElapsed \(wall clock\) time \(h:mm:ss or m:ss\): (.+)/
-  )?.[1];
-  const memoryUsage = timeOutput.match(
-    /\tMaximum resident set size \(kbytes\): (.+)/
-  )?.[1];
+export interface ExecuteProcessOutput {
+  stdout: string | null;
+  stderr: string | null;
+  exitCode: number | null;
+  exitSignal: string | null;
+  processError: string | null;
+}
+
+export const parseReturnInfoOfSpawn = (spawnReturn: SpawnSyncReturns<Buffer>): ExecuteProcessOutput => {
   return {
-    restOfString,
-    time: wallTime ?? null,
-    memory: memoryUsage ?? null,
+    stdout: spawnReturn.stdout?.toString() ?? null,
+    stderr: spawnReturn.stderr?.toString() ?? null,
+    processError: spawnReturn.error?.message ?? null,
+    exitSignal: spawnReturn.signal,
+    exitCode: spawnReturn.status,
   };
-};
+}

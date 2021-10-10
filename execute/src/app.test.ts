@@ -1,5 +1,11 @@
 import * as app from "./app";
 
+const checkTimeStderr = (stderr: string | null) => {
+  expect(stderr).not.toBeNull();
+  expect(stderr).toMatch(/Elapsed \(wall clock\) time/);
+  expect(stderr).toMatch(/Maximum resident set size \(kbytes\): [0-9]{4}/);
+};
+
 describe("C++", () => {
   it("compiles and runs", async () => {
     const compileResult = (await app.lambdaHandler({
@@ -8,30 +14,33 @@ describe("C++", () => {
       compilerOptions: "",
       filename: "main.cpp",
       sourceCode: `#include <bits/stdc++.h>
-        using namespace std;
-        int main() {
-          int a, b, c;
-          cin >> a >> b >> c;
-          cerr << "Hello";
-          cout <<a+b+c << endl;
-        }`,
+      using namespace std;
+      int main() {
+        int a, b, c;
+        cin >> a >> b >> c;
+        cerr << "Hello";
+        cout <<a+b+c << endl;
+      }`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
 
-    // hide time and memory since that might change from execution to execution
-    const { time, memory, ...runResult } = (await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
     })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
-      Object {
-        "status": "success",
-        "stderr": "Hello",
-        "stdout": "6
-      ",
-      }
-    `);
+Object {
+  "exitCode": 0,
+  "exitSignal": null,
+  "processError": null,
+  "status": "success",
+  "stdout": "6
+",
+}
+`);
+    checkTimeStderr(stderr);
   });
 
   it("throws compilation error", async () => {
@@ -44,19 +53,23 @@ describe("C++", () => {
         "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}",
     });
     expect(compileResult).toMatchInlineSnapshot(`
-      Object {
-        "message": "main.cpp: In function ‘int main()’:
-      main.cpp:3:42: error: ‘cd’ was not declared in this scope
-       int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
-                                                ^~
-      main.cpp:3:42: note: suggested alternative: ‘c’
-       int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
-                                                ^~
-                                                c
-      ",
-        "status": "compile_error",
-      }
-    `);
+Object {
+  "exitCode": 1,
+  "exitSignal": null,
+  "processError": null,
+  "status": "compile_error",
+  "stderr": "main.cpp: In function ‘int main()’:
+main.cpp:3:42: error: ‘cd’ was not declared in this scope
+ int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
+                                          ^~
+main.cpp:3:42: note: suggested alternative: ‘c’
+ int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
+                                          ^~
+                                          c
+",
+  "stdout": "",
+}
+`);
   });
 
   it("throws TLE error", async () => {
@@ -66,30 +79,34 @@ describe("C++", () => {
       compilerOptions: "",
       filename: "main.cpp",
       sourceCode: `#include <bits/stdc++.h>
-using namespace std;
-int main() {
-  int a, b, c;
-  cin >> a >> b >> c;
-  cout << "Hello World!" << endl;
-  for (long long i = 0;i < 100000000000; i++) c++;
-  cout <<a+b+c << endl;
-}`,
+  using namespace std;
+  int main() {
+    int a, b, c;
+    cin >> a >> b >> c;
+    cout << "Hello World!" << endl;
+    for (long long i = 0;i < 100000000000; i++) c++;
+    cout <<a+b+c << endl;
+  }`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
-    const runResult = await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
       timeout: 100,
-    });
+    })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
-      Object {
-        "status": "time_limit_exceeded",
-        "stderr": "",
-        "stdout": "Hello World!
-      ",
-      }
-    `);
+Object {
+  "exitCode": 124,
+  "exitSignal": null,
+  "processError": null,
+  "status": "success",
+  "stdout": "Hello World!
+",
+}
+`);
+    checkTimeStderr(stderr);
   });
 
   it("throws Runtime Error", async () => {
@@ -109,23 +126,25 @@ int main() {
 }`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
-    // hide time and memory since that might change from execution to execution
-    const { time, memory, ...runResult } = (await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
     })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
-      Object {
-        "status": "success",
-        "stderr": "prog: main.cpp:7: int main(): Assertion \`false' failed.
-      Aborted
-      Command exited with non-zero status 134
-      ",
-        "stdout": "Hello World!
-      ",
-      }
-    `);
+Object {
+  "exitCode": 134,
+  "exitSignal": null,
+  "processError": null,
+  "status": "success",
+  "stdout": "Hello World!
+",
+}
+`);
+    expect(stderr).toMatch(/Assertion `false' failed/);
+    expect(stderr).toMatch(/Command exited with non-zero status 134/);
+    checkTimeStderr(stderr);
   });
 });
 
@@ -151,20 +170,23 @@ describe("Java", () => {
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
 
-    // hide time and memory since that might change from execution to execution
-    const { time, memory, ...runResult } = (await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
     })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
-      Object {
-        "status": "success",
-        "stderr": "",
-        "stdout": "sum is 6
-      ",
-      }
-    `);
+Object {
+  "exitCode": 0,
+  "exitSignal": null,
+  "processError": null,
+  "status": "success",
+  "stdout": "sum is 6
+",
+}
+`);
+    checkTimeStderr(stderr);
   });
 
   it("throws compilation error", async () => {
@@ -187,15 +209,19 @@ describe("Java", () => {
         }`,
     });
     expect(compileResult).toMatchInlineSnapshot(`
-      Object {
-        "message": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
-              public class NotMain {
-                     ^
-      1 error
-      ",
-        "status": "compile_error",
-      }
-    `);
+Object {
+  "exitCode": 1,
+  "exitSignal": null,
+  "processError": null,
+  "status": "compile_error",
+  "stderr": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
+        public class NotMain {
+               ^
+1 error
+",
+  "stdout": "",
+}
+`);
   });
 
   it("throws TLE error", async () => {
@@ -219,19 +245,23 @@ describe("Java", () => {
       }`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
-    const runResult = await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
       timeout: 100,
-    });
+    })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
-      Object {
-        "status": "time_limit_exceeded",
-        "stderr": "",
-        "stdout": "",
-      }
-    `);
+Object {
+  "exitCode": 124,
+  "exitSignal": null,
+  "processError": null,
+  "status": "success",
+  "stdout": "",
+}
+`);
+    checkTimeStderr(stderr);
   });
 
   it("throws Runtime Error", async () => {
@@ -254,26 +284,23 @@ describe("Java", () => {
       }`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
-    // hide time and memory since that might change from execution to execution
-    const { time, memory, ...runResult } = (await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
-      input: "",
+      input: "1 2 3",
     })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
 Object {
+  "exitCode": 0,
+  "exitSignal": null,
+  "processError": null,
   "status": "success",
-  "stderr": "Exception in thread \\"main\\" java.util.NoSuchElementException
-	at java.util.Scanner.throwFor(Scanner.java:862)
-	at java.util.Scanner.next(Scanner.java:1485)
-	at java.util.Scanner.nextInt(Scanner.java:2117)
-	at java.util.Scanner.nextInt(Scanner.java:2076)
-	at Main.main(Main.java:6)
-Command exited with non-zero status 1
+  "stdout": "sum is 6
 ",
-  "stdout": "",
 }
 `);
+    checkTimeStderr(stderr);
   });
 });
 
@@ -289,20 +316,23 @@ print(a + b + c)`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
 
-    // hide time and memory since that might change from execution to execution
-    const { time, memory, ...runResult } = (await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
     })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
 Object {
+  "exitCode": 0,
+  "exitSignal": null,
+  "processError": null,
   "status": "success",
-  "stderr": "",
   "stdout": "6
 ",
 }
 `);
+    checkTimeStderr(stderr);
   });
 
   it("throws TLE error", async () => {
@@ -317,19 +347,23 @@ while True:
 print(a)`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
-    const runResult = await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
-      input: "",
+      input: "1 2 3",
       timeout: 100,
-    });
+    })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
 Object {
-  "status": "time_limit_exceeded",
-  "stderr": "",
+  "exitCode": 124,
+  "exitSignal": null,
+  "processError": null,
+  "status": "success",
   "stdout": "",
 }
 `);
+    checkTimeStderr(stderr);
   });
 
   it("throws Runtime Error", async () => {
@@ -341,44 +375,21 @@ Object {
       sourceCode: `laksjdflkja`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
-    // hide time and memory since that might change from execution to execution
-    const { time, memory, ...runResult } = (await app.lambdaHandler({
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
       type: "execute",
       payload: compileResult.output,
-      input: "",
+      input: "1 2 3",
     })) as app.ExecutionResult & { status: "success" };
     expect(runResult).toMatchInlineSnapshot(`
 Object {
+  "exitCode": 1,
+  "exitSignal": null,
+  "processError": null,
   "status": "success",
-  "stderr": "Traceback (most recent call last):
-  File \\"main.py\\", line 1, in <module>
-    laksjdflkja
-NameError: name 'laksjdflkja' is not defined
-Error in sys.excepthook:
-Traceback (most recent call last):
-  File \\"/usr/lib/python3/dist-packages/apport_python_hook.py\\", line 63, in apport_excepthook
-    from apport.fileutils import likely_packaged, get_recent_crashes
-  File \\"/usr/lib/python3/dist-packages/apport/__init__.py\\", line 5, in <module>
-    from apport.report import Report
-  File \\"/usr/lib/python3/dist-packages/apport/report.py\\", line 30, in <module>
-    import apport.fileutils
-  File \\"/usr/lib/python3/dist-packages/apport/fileutils.py\\", line 23, in <module>
-    from apport.packaging_impl import impl as packaging
-  File \\"/usr/lib/python3/dist-packages/apport/packaging_impl.py\\", line 24, in <module>
-    import apt
-  File \\"/usr/lib/python3/dist-packages/apt/__init__.py\\", line 23, in <module>
-    import apt_pkg
-ModuleNotFoundError: No module named 'apt_pkg'
-
-Original exception was:
-Traceback (most recent call last):
-  File \\"main.py\\", line 1, in <module>
-    laksjdflkja
-NameError: name 'laksjdflkja' is not defined
-Command exited with non-zero status 1
-",
   "stdout": "",
 }
 `);
+    checkTimeStderr(stderr);
   });
 });
