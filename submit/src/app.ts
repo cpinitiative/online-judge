@@ -143,19 +143,21 @@ export const lambdaHandler = async (
     });
   }
 
-  if (exitSignal !== null || processError !== null) {
-    return buildResponse(
-      {
-        status: "internal_error",
-        message:
-          "Execution may have failed for an unknown reason. Exit signal / process error was expected to be null, but wasn't.",
-        debugData: executeData,
-      },
-      {
-        statusCode: 500,
-      }
-    );
-  }
+  // Honestly I don't think this check is necessary.
+  // Sometimes processError would have EPIPE if the program didn't finish reading in all the stdin.
+  // if (exitSignal !== null || processError !== null) {
+  //   return buildResponse(
+  //     {
+  //       status: "internal_error",
+  //       message:
+  //         "Execution may have failed for an unknown reason. Exit signal / process error was expected to be null, but wasn't.",
+  //       debugData: executeData,
+  //     },
+  //     {
+  //       statusCode: 500,
+  //     }
+  //   );
+  // }
 
   if (exitCode !== 0) {
     return buildResponse({

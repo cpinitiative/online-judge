@@ -53,6 +53,8 @@ export type ExecutionResult =
       status: "success";
     } & ExecuteProcessOutput;
 
+const MAX_BUFFER_SIZE = 1024*1024*30; // 30mb. note that 6mb is API gateway limit for lambda
+
 export const lambdaHandler = async function (
   event: ExecuteEvent
 ): Promise<CompilationResult | ExecutionResult> {
@@ -130,6 +132,7 @@ export const lambdaHandler = async function (
       cwd: "/tmp/program",
       input: event.input,
       shell: true,
+      maxBuffer: MAX_BUFFER_SIZE
     });
 
     unlinkSync("/tmp/program.zip");
@@ -140,59 +143,6 @@ export const lambdaHandler = async function (
       status: "success",
       ...parseReturnInfoOfSpawn(spawnResult),
     };
-
-    // if (
-    //   signal === "SIGTERM" &&
-    //   error?.message.toString() === "spawnSync /bin/sh ETIMEDOUT"
-    // ) {
-    //   return {
-    //     status: "time_limit_exceeded",
-    //     stdout: stdout.toString(),
-    //     stderr: stderrWithTime.toString(),
-    //   };
-    // }
-
-    // if (error) {
-    //   return {
-    //     status: "internal_error",
-    //     message: `An unknown error has occurred.\n\nError:\n${error.message}\n\nProgram Stdout:\n${stdout.toString()}\n\nProgram Stderr:\n${stderrWithTime.toString()}`,
-    //   };
-    // }
-
-    // const {
-    //   restOfString: stderr,
-    //   time,
-    //   memory,
-    // } = extractTimingInfo(stderrWithTime.toString());
-
-    // if (!time || !memory) {
-    //   return {
-    //     status: "internal_error",
-    //     message:
-    //       "Time and memory are null but they shouldn't be. stderr output: " +
-    //       stderrWithTime.toString(),
-    //   };
-    // }
-
-    // todo how to check Runtime Error??
-    // if (error) {
-    //   return {
-    //     status: "runtime_error",
-    //     message: error.message,
-    //     stdout: stdout.toString(),
-    //     stderr: stderr,
-    //     time,
-    //     memory,
-    //   };
-    // }
-
-    // return {
-    //   status: "success",
-    //   stdout: stdout.toString(),
-    //   stderr: stderr,
-    //   time,
-    //   memory,
-    // };
   } else {
     return {
       status: "internal_error",
