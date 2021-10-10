@@ -54,11 +54,7 @@ Object {
     });
     expect(compileResult).toMatchInlineSnapshot(`
 Object {
-  "exitCode": 1,
-  "exitSignal": null,
-  "processError": null,
-  "status": "compile_error",
-  "stderr": "main.cpp: In function ‘int main()’:
+  "message": "main.cpp: In function ‘int main()’:
 main.cpp:3:42: error: ‘cd’ was not declared in this scope
  int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
                                           ^~
@@ -67,7 +63,7 @@ main.cpp:3:42: note: suggested alternative: ‘c’
                                           ^~
                                           c
 ",
-  "stdout": "",
+  "status": "compile_error",
 }
 `);
   });
@@ -210,16 +206,12 @@ Object {
     });
     expect(compileResult).toMatchInlineSnapshot(`
 Object {
-  "exitCode": 1,
-  "exitSignal": null,
-  "processError": null,
-  "status": "compile_error",
-  "stderr": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
+  "message": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
         public class NotMain {
                ^
 1 error
 ",
-  "stdout": "",
+  "status": "compile_error",
 }
 `);
   });

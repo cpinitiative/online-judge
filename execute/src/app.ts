@@ -37,8 +37,8 @@ export type CompilationResult =
     }
   | ({
       status: "compile_error";
-
-    } & ExecuteProcessOutput)
+      message: string;
+    })
   | {
       status: "success";
       /**
@@ -104,10 +104,11 @@ export const lambdaHandler = async function (
         shell: true,
       }
     );
+    const processOutput = parseReturnInfoOfSpawn(spawnResult);
     if (spawnResult.status !== 0) {
       return {
         status: "compile_error",
-        ...parseReturnInfoOfSpawn(spawnResult),
+        message: processOutput.stderr ?? "",
       };
     }
 
@@ -119,7 +120,7 @@ export const lambdaHandler = async function (
     return {
       status: "success",
       output: zipAndRemoveOutDir(),
-      processOutput: parseReturnInfoOfSpawn(spawnResult),
+      processOutput: processOutput,
     };
   } else if (event.type === "execute") {
     writeFileSync("/tmp/program.zip", event.payload, "base64");

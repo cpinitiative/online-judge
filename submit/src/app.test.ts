@@ -34,20 +34,16 @@ describe("C++", () => {
     );
     const data = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
-      Object {
-        "exitCode": 1,
-        "exitSignal": null,
-        "processError": null,
-        "status": "compile_error",
-        "stderr": "main.cpp: In function ‘int main()’:
-      main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c’?
-          3 | int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
-            |                                          ^~
-            |                                          c
-      ",
-        "stdout": "",
-      }
-    `);
+Object {
+  "message": "main.cpp: In function ‘int main()’:
+main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c’?
+    3 | int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
+      |                                          ^~
+      |                                          c
+",
+  "status": "compile_error",
+}
+`);
   });
 
   it("throws TLE error", async () => {
@@ -249,19 +245,15 @@ describe("Java", () => {
     );
     const data = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
-      Object {
-        "exitCode": 1,
-        "exitSignal": null,
-        "processError": null,
-        "status": "compile_error",
-        "stderr": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
-                public class NotMain {
-                       ^
-      1 error
-      ",
-        "stdout": "",
-      }
-    `);
+Object {
+  "message": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
+          public class NotMain {
+                 ^
+1 error
+",
+  "status": "compile_error",
+}
+`);
   });
 
   it("throws TLE error", async () => {
