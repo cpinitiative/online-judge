@@ -8,11 +8,10 @@ To create a low-cost, reliable, fast, and consistent online judge that supports 
 
 ## Architecture
 
-Everything is done with AWS Lambda functions. The online judge itself is split into three functions:
+Everything is done with AWS Lambda functions. The online judge itself is split into two functions:
 
-1. The main lambda function that the user calls to create a new submission, along with the source code and test data. This function calls other lambdas to compile and execute the code, then updates the database as new results come in.
+1. The main lambda function that the user calls. This lambda function calls the sandboxed code execution lambda function and returns the output to the user. It has full access to AWS resources, so it should not execute any user code.
 2. The sandboxed code execution lambda function that either takes source code and returns a compiled binary, or takes a compiled binary and the input and returns the output. For security, this function has minimal access to AWS resources. This function is never directly called by the user, and can only be called by the main lambda function.
-3. The status check lambda function that the user calls to check the status of their submission. This function queries the database and returns the submission status.
 
 ### Submit Function
 
@@ -111,9 +110,9 @@ sam deploy
 
 The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod
 
-- `POST /execute`: Code execution. Ex: USACO Guide IDE
-- `POST /submissions`: Create a new problem submission. Ex: code submission on USACO Guide groups
-- `GET /submissions/{submissionId}`: Get the status of the submission associated with the given submission ID
+- `POST /execute`: Code execution. Ex: USACO Guide IDE.
+- `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups
+- `GET /submissions/{submissionId}` (under development): Get the status of the submission associated with the given submission ID
 
 Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
 
