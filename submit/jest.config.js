@@ -1,6 +1,6 @@
 module.exports = {
   preset: "ts-jest",
-  modulePathIgnorePatterns: ["<rootDir>/.aws-sam"],
+  modulePathIgnorePatterns: ["<rootDir>/.aws-sam", "dist"],
   globals: {
     "ts-jest": {
       tsconfig: {

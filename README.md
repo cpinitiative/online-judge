@@ -8,11 +8,10 @@ To create a low-cost, reliable, fast, and consistent online judge that supports 
 
 ## Architecture
 
-Everything is done with AWS Lambda functions. The online judge itself is split into three functions:
+Everything is done with AWS Lambda functions. The online judge itself is split into two functions:
 
-1. The main lambda function that the user calls to create a new submission, along with the source code and test data. This function calls other lambdas to compile and execute the code, then updates the database as new results come in.
+1. The main lambda function that the user calls. This lambda function calls the sandboxed code execution lambda function and returns the output to the user. It has full access to AWS resources, so it should not execute any user code.
 2. The sandboxed code execution lambda function that either takes source code and returns a compiled binary, or takes a compiled binary and the input and returns the output. For security, this function has minimal access to AWS resources. This function is never directly called by the user, and can only be called by the main lambda function.
-3. The status check lambda function that the user calls to check the status of their submission. This function queries the database and returns the submission status.
 
 ### Submit Function
 
@@ -86,6 +85,14 @@ If snapshots need to be updated:
 npm run test -- -u
 ```
 
+#### Testing Builds
+
+Source: https://docs.aws.amazon.com/AmazonECR/latest/userguide/amazon_linux_container_image.html
+
+```
+docker run -it public.ecr.aws/amazonlinux/amazonlinux /bin/bash
+```
+
 ### Prettier
 
 ```
@@ -103,8 +110,33 @@ sam deploy
 
 The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod
 
-- `POST /execute`: Code execution. Ex: USACO Guide IDE
-- `POST /submissions`: Create a new problem submission. Ex: code submission on USACO Guide groups
-- `GET /submissions/{submissionId}`: Get the status of the submission associated with the given submission ID
+- `POST /execute`: Code execution. Ex: USACO Guide IDE.
+- `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups
+- `GET /submissions/{submissionId}` (under development): Get the status of the submission associated with the given submission ID
 
 Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
+
+## Misc Notes
+
+### Installing GCC on Amazon Linux 2
+
+The default version of GCC is not new enough to support some of the [`-fsanitize=undefined`](https://usaco.guide/general/debugging-lang/#-fsanitizeundefined) features. We can use [`devtoolset-10`](https://access.redhat.com/documentation/en-us/red_hat_developer_toolset/10/html-single/user_guide/index#part-Introduction) to get access to a newer version of GCC.
+
+```
+yum install -y yum-utils wget
+yum-config-manager --add-repo http://mirror.centos.org/centos/7/sclo/x86_64/rh/
+wget http://mirror.centos.org/centos/7/os/x86_64/Packages/libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm
+yum install libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm -y
+yum install -y devtoolset-10 --nogpgcheck
+scl enable devtoolset-10 bash
+```
+
+You might be able to get away with just installing `devtoolset-10-toolchain`, but I haven't tried.
+
+Note that the last line, `scl enable devtoolset-10 bash`, doesn't seem to work with AWS Lambda. Instead, the full path, `/opt/rh/devtoolset-10/root/usr/bin/g++`, is used.
+
+Furthermore, some optional libraries need to be installed for flags like `fsanitize` to work. Optional libraries can be found with `yum list available devtoolset-10-\*`. I have no idea which are needed...
+- `devtoolset-10-libubsan-devel.x86_64` is needed for `fsanitize=undefined`
+- `devtoolset-10-libasan-devel.x86_64` is needed for `fsanitize=address`
+
+Also see [this SO post](https://stackoverflow.com/questions/61165009/how-to-install-devtoolset-8-gcc-8-on-amazon-linux-2).

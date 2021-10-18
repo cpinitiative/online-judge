@@ -1,17 +1,46 @@
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { buildResponse, extractTimingInfo } from "./utils";
 
 const client = new LambdaClient({
   region: "us-west-1",
 });
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Temporarily copy pasted from the execute lambda...
+interface ExecuteResult {
+  status: "success";
+  stdout: string | null;
+  stderr: string | null;
+  exitCode: number | null;
+  exitSignal: string | null;
+  processError: string | null;
+}
+
+// Note: for problem submission, some flags to keep in mind: http://usaco.org/index.php?page=instructions
+
+export const lambdaHandler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
   const requestData = JSON.parse(event.body || "{}");
 
    const operation = event.operation;
 
   switch (operation) {
     case 'create': // create a new problem submission (POST)
+
+      // todo validate structure of body?
+      if (!requestData.language) {
+        return {
+          statusCode: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+          body: JSON.stringify({
+            message: "Unknown language.",
+          }),
+        };
+      }
 
       const compileCommand = new InvokeCommand({
         FunctionName: "online-judge-ExecuteFunction",
@@ -31,35 +60,40 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
           Buffer.from(compileResponse.Payload!).toString()
       );
 
-      if(compileData.status === "compile error"){
+      if (compileData.status === "compile_error") {
         return {
           statusCode: 200,
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
           },
-          body: Buffer.from(compileResponse.Payload!).toString()
-        }
-      }
-      else if (compileData.status === "runtime error"){
-        return {
-          statusCode: 100,
-          headers: {
-            'Content-Type': 'application/json',
-            "Access-Control-Allow-Origin": "*",
-          },
-          body: Buffer.from(compileResponse.Payload!).toString()
-        }
-      }
-      else if (compileData.status !== "success") {
-        // todo better error handling?
+          body: Buffer.from(compileResponse.Payload!).toString(),
+        };
+      } else if (compileData.status === "internal_error") {
         return {
           statusCode: 500,
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
           },
-          body: Buffer.from(compileResponse.Payload!).toString()
+          body: JSON.stringify({
+            status: "internal_error",
+            message: "Compilation failed with an internal error",
+            debugData: compileData,
+          }),
+        };
+      } else if (compileData.status !== "success") {
+        return {
+          statusCode: 500,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+          body: JSON.stringify({
+            status: "internal_error",
+            message: "Compilation failed with an unknown error",
+            debugData: compileData,
+          }),
         };
       }
 
@@ -70,22 +104,68 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
               type: "execute",
               payload: compileData.output,
               input: requestData.input,
+              timeout: 5000,
             })
         ),
       });
       const executeResponse = await client.send(executeCommand);
-      // const executeData = JSON.parse(
-      //   Buffer.from(executeResponse.Payload!).toString()
-      // );
+      const executeData: ExecuteResult = JSON.parse(
+          Buffer.from(executeResponse.Payload!).toString()
+      );
 
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: Buffer.from(executeResponse.Payload!).toString()
-      };
+      if (executeData.status !== "success") {
+        return {
+          statusCode: 500,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+          body: JSON.stringify({
+            status: "internal_error",
+            message: "Execution failed for an unknown reason",
+            debugData: executeData,
+          }),
+        };
+      }
+
+      const { stdout, exitCode, exitSignal, processError } = executeData;
+
+      const {
+        restOfString: stderr,
+        time,
+        memory,
+      } = extractTimingInfo(executeData.stderr);
+
+      // 124 is the exit code returned by linux `timeout` command
+      if (exitCode === 124) {
+        return buildResponse({
+          status: "time_limit_exceeded",
+          stdout,
+          stderr,
+          time,
+          memory,
+          exitCode,
+        });
+      }
+      
+      if (exitCode !== 0) {
+        return buildResponse({
+          status: "runtime_error",
+          stdout,
+          stderr,
+          time,
+          memory,
+          exitCode,
+        });
+      }
+
+      return buildResponse({
+        status: "success",
+        stdout,
+        stderr,
+        time,
+        memory,
+      });
       break;
     case 'read': // get a problem submission (GET)
 
@@ -104,19 +184,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             result: "Inavalid event"
         })
       };
-  }
-  // todo validate structure of body?
-  if (!requestData.language) {
-    return {
-      statusCode: 400,
-      headers: {
-        'Content-Type': 'application/json',
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        message: "Unknown language."
-      })
-    };
   }
 
 };
