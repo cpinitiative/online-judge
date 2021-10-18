@@ -61,6 +61,55 @@ Resources:
             Method: get
     Metadata:
       BuildMethod: makefile
+    ProcessDynamoDBStream:
+      Type: AWS::Serverless::Function
+      Properties:
+        Handler: handler
+        Runtime: runtime
+        Policies: AWSLambdaDynamoDBExecutionRole
+        Events:
+          Stream:
+            Type: DynamoDB
+            Properties:
+              Stream: !GetAtt DynamoDBTable.StreamArn
+              BatchSize: 100
+              StartingPosition: TRIM_HORIZON
+
+TestCaseBucket:
+  Type: AWS::S3::Bucket
+DynamoDBTable:
+  Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: statusTable
+      AttributeDefinitions:
+        - AttributeName: submissionId
+          AttributeType: S
+        - AttributeName: problemId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+        - AttributeName: compileOutput
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: SS
+
+      KeySchema:
+        - AttributeName: submissionId
+          KeyType: HASH
+        - AttributeName: problemId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: HASH
+        - AttributeName: compileOutput
+          KeyType: HASH
+        - AttributeName: status
+          KeyType: HASH
+
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
 
 
 Outputs:

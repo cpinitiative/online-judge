@@ -1,10 +1,14 @@
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyResult, AWS } from "aws-lambda";
 import { buildResponse, extractTimingInfo } from "./utils";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { DynamoDBClient, CreateTableCommand, CreateTableCommandInput } from "@aws-sdk/client-dynamodb";
+
+
 
 const client = new LambdaClient({
   region: "us-west-1",
 });
+const dynamo = new AWS.DynamoDB.DocumentClient();
 
 // Temporarily copy pasted from the execute lambda...
 interface ExecuteResult {
@@ -23,10 +27,12 @@ export const lambdaHandler = async (
 ): Promise<APIGatewayProxyResult> => {
   const requestData = JSON.parse(event.body || "{}");
 
-   const operation = event.operation;
 
-  switch (operation) {
-    case 'create': // create a new problem submission (POST)
+  switch (event.routeKey) {
+    case 'POST /submissions': // create a new problem submission (POST)
+
+      break;
+    case 'POST /execute':
 
       // todo validate structure of body?
       if (!requestData.language) {
@@ -136,8 +142,32 @@ export const lambdaHandler = async (
         memory,
       } = extractTimingInfo(executeData.stderr);
 
+      let requestJSON = JSON.parse(event.body);
+
+
       // 124 is the exit code returned by linux `timeout` command
       if (exitCode === 124) {
+        let statusList = [{ status: "time_limit_exceeded", // get the test cases from S3 bucket;
+          // TODO: Edit execute function such that it returns an array of test cases
+          stdout,
+          stderr,
+          time,
+          memory,
+          exitCode,}]
+
+        await dynamo
+            .put({
+              TableName: "statusTable",
+              Item: {
+                submissionId: "ewksdn",
+                problemId: "fkwf",
+                timestamp: 1,
+                compileOutput: "wfewef",
+                status: statusList,
+              }
+            })
+            .promise();
+
         return buildResponse({
           status: "time_limit_exceeded",
           stdout,
@@ -147,7 +177,7 @@ export const lambdaHandler = async (
           exitCode,
         });
       }
-      
+
       if (exitCode !== 0) {
         return buildResponse({
           status: "runtime_error",
@@ -167,10 +197,7 @@ export const lambdaHandler = async (
         memory,
       });
       break;
-    case 'read': // get a problem submission (GET)
-
-      break;
-    case 'put': //  execute a single test-case (PUT)
+    case 'GET /submissions/{submissionId}':
 
       break;
     default:
