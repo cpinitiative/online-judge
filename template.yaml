@@ -79,18 +79,14 @@ TestCaseBucket:
   Type: AWS::S3::Bucket
 DynamoDBTable:
   Type: AWS::DynamoDB::Table
-    Properties:
+  Properties:
       TableName: statusTable
       AttributeDefinitions:
         - AttributeName: submissionId
           AttributeType: S
-        - AttributeName: problemId
+        - AttributeName: results
           AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: N
-        - AttributeName: compileOutput
-          AttributeType: S
-        - AttributeName: status
+        - AttributeName: verdict
           AttributeType: SS
 
       KeySchema:

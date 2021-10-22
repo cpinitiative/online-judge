@@ -2,13 +2,23 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, AWS } from "aws-lambda";
 import { buildResponse, extractTimingInfo } from "./utils";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { DynamoDBClient, CreateTableCommand, CreateTableCommandInput } from "@aws-sdk/client-dynamodb";
+
+import * as S3 from 'aws-sdk/clients/s3';
 import { uuid } from 'uuidv4';
 
 
 const client = new LambdaClient({
   region: "us-west-1",
 });
+
+AWS.config.update({
+  accessKeyId: "AKIAWCOXREPQGDVKJOOV",
+  secretAccessKey: "AKIAWCOXREPQGDVKJOOV",
+  region: "us-west-1"
+});
+
 const dynamo = new AWS.DynamoDB.DocumentClient();
+const s3 = new AWS.S3();
 
 // Temporarily copy pasted from the execute lambda...
 interface ExecuteResult {
@@ -33,7 +43,82 @@ export const lambdaHandler = async (
       const submissionID = uuid();
       // todo validate structure of body?
 
+
+      const params =  {
+        Bucket:'cpi-onlinejudge',
+        Delimiter: '/',
+        Prefix: requestData.problemid + '/'
+      };
+
+      // store expected in and put in a map
+        // iterate through map elemntes and run a execute function and process/store the result in an  array
+        // return that array to the fromtend...
+
+      let outFiles = [];
+      let inFiles = [];
+      let len:number;
+
+      s3.getS3Bucket().listObjects(params, async function (err, data) { // get file content, number of test cases
+        if (err) {
+          console.log('There was an error getting your files: ' + err);
+          return;
+        }
+        console.log('Successfully get files.', data);
+
+        const fileDetails = data.Contents;
+        len = fileDetails.length;
+        console.log(len)
+
+        for (const file of fileDetails) {
+          const fileParams = {
+            Bucket: 'cpi-onlinejudge',
+            Key: file.key // name of the file
+          }
+          let data = await s3.getObject(params).promise().Body.toString('utf-8') // get file content
+          const dot: number = file.key.indexOf('.');
+          const tcNum: number = Number(file.key.substr(0, dot)); // get the tc number as specfied by the fileName.
+
+          file.key.indexOf('out') !== -1 ? outFiles[tcNum] = data : inFiles[tcNum] = data; // match the file content to the correct index
+        }
+        ;
+      });
+
+      let results: string[] = []; // execute each test case
+      let status: string[] = []; // execute each test case
+      for (let i = 1; i <= len; i++) {
+        const execData = await execute(requestData, event, inFiles[i]);
+
+        if(typeof execData.statusCode != 'undefined'){
+          results[i] = execData.body;
+          status[i] = execData.body.status;
+        }else{
+          results[i] = JSON.parse(
+              Buffer.from(execData).toString()
+          );
+
+          if(execData.stdout == outFiles[i]){
+            status[i] = 'correct_answer';
+          }else{
+            status[i] = 'wrong_answer';
+          }
+
+        }
+      }
+
+      await dynamo
+          .put({
+            TableName: "statusTable",
+            Item: {
+              submissionId: submissionID,
+              results: JSON.stringify(results),
+              verdict: status,  //  one string result for each case ie ("compile_error")
+            }
+          })
+          .promise();
+
+      return submissionID;
       break;
+
     case 'POST /execute':
 
       return execute(requestData, event);
@@ -44,7 +129,7 @@ export const lambdaHandler = async (
           .get({
             TableName: "statusTable",
             Key: {
-              id: event.pathParameters.id
+              id: event.pathParameters.submissionid
             }
           })
           .promise();
@@ -69,14 +154,14 @@ export const lambdaHandler = async (
           "Access-Control-Allow-Origin": "*",
         },
         body: JSON.stringify({
-            result: "Inavalid event"
+            status: "Inavalid event"
         })
       };
   }
 
 };
 
-const execute = async (requestData, event) => {
+const execute = async (requestData, event, input) => {
   if (!requestData.language) {
     return {
       statusCode: 400,
@@ -85,7 +170,7 @@ const execute = async (requestData, event) => {
         "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
-        message: "Unknown language.",
+        status: "Unknown language.",
       }),
     };
   }
@@ -151,7 +236,7 @@ const execute = async (requestData, event) => {
         JSON.stringify({
           type: "execute",
           payload: compileData.output,
-          input: requestData.input,
+          input:  input,
           timeout: 5000,
         })
     ),
@@ -198,19 +283,6 @@ const execute = async (requestData, event) => {
       memory: memory,
       exitCode: exitCode,
     }]
-
-    // await dynamo
-    //     .put({
-    //       TableName: "statusTable",
-    //       Item: {
-    //         submissionId: submissionID,
-    //         problemId: "fkwf",
-    //         timestamp: 1,
-    //         compileOutput: "wfewef",
-    //         status: statusList,
-    //       }
-    //     })
-    //     .promise();
 
     return buildResponse({
       status: "time_limit_exceeded",
