@@ -125,7 +125,7 @@ const baseAPIGatewayRequest = {
     },
     "path": "/prod/path/to/resource",
     "resourcePath": "/{proxy+}",
-    "httpMethod": "POST",
+    "httpMethod": "POST /submissions",
     "apiId": "1234567890",
     "protocol": "HTTP/1.1",
   }

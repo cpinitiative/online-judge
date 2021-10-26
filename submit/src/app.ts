@@ -1,9 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult} from "aws-lambda";
 import { buildResponse, extractTimingInfo } from "./utils";
-const AWS = require('aws-sdk')
+import { S3Client, AbortMultipartUploadCommand, ListObjectsCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import { DynamoDBClient, CreateTableCommand, CreateTableCommandInput } from "@aws-sdk/client-dynamodb";
-
+const { DynamoDBClient, ListTablesCommand, CreateTableCommand, CreateTableCommandInput, PutItemCommand, GetItemCommand } = require("@aws-sdk/client-dynamodb");
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -11,14 +10,13 @@ const client = new LambdaClient({
   region: "us-west-1",
 });
 
-AWS.config.update({
+const config = {
   accessKeyId: "AKIAWCOXREPQGDVKJOOV",
   secretAccessKey: "AKIAWCOXREPQGDVKJOOV",
-  region: "us-west-1"
-});
+};
 
-const dynamo = new AWS.DynamoDB.DocumentClient();
-const s3 = new AWS.S3();
+  const db = new DynamoDBClient({credentials: config,   region: "us-west-1"});
+  const s3 = new S3Client({credentials: config,   region: "us-west-1"});
 
 // Temporarily copy pasted from the execute lambda...
 interface ExecuteResult {
@@ -58,49 +56,50 @@ export const lambdaHandler = async (
       let inFiles :string [] = [];
       let len:number = 0;
 
-      s3.listObjects(params, function (err:any, data:any) { // get file content, number of test cases
-        if (err) {
-          console.log('There was an error getting your files: ' + err);
-          return;
+      const command =  new ListObjectsCommand(params);
+      const data = await s3.send(command);
+
+      const fileDetails:any = data.Contents;
+      len = fileDetails.length;
+      console.log(len)
+
+      for (const file of fileDetails) {
+        const fileParams = {
+          Bucket: 'cpi-onlinejudge',
+          Key: file.key // name of the file
         }
-        console.log('Successfully get files.', data);
+        const fileCommand = new GetObjectCommand(fileParams);
+        const response = await s3.send(fileCommand);
+        let rawFileContent = response.Body.toString('utf-8')// get file content
 
-        const fileDetails = data.Contents;
-        len = fileDetails.length;
-        console.log(len)
-
-        for (const file of fileDetails) {
-          const fileParams = {
-            Bucket: 'cpi-onlinejudge',
-            Key: file.key // name of the file
-          }
-          let data = s3.getObject(params).promise().Body.toString('utf-8') // get file content
-          const dot: number = file.key.indexOf('.');
-          const tcNum: number = Number(file.key.substr(0, dot)); // get the tc number as specfied by the fileName.
-
-          file.key.indexOf('out') !== -1 ? outFiles[tcNum] = data : inFiles[tcNum] = data; // match the file content to the correct index
-        }
-        ;
-      });
+        const dot: number = file.key.indexOf('.');
+        const tcNum: number = Number(file.key.substr(0, dot)); // get the tc number as specfied by the fileName.
+        file.key.indexOf('out') !== -1 ? outFiles[tcNum] = rawFileContent : inFiles[tcNum] = rawFileContent; // match the file content to the correct index
+      }
 
       let results: string[] = []; // execute each test case
       let status: string[] = []; // execute each test case
       for (let i = 1; i <= len; i++) {
         const execData = await execute(requestData, event, inFiles[i]);
           results[i] = execData.body;
-          status[i] = JSON.parse(results[i]).status;
+          const output:string = JSON.parse(results[i]).body.stdout;
+          if(output == outFiles[i]){
+            status[i] = "correct";
+          }else{
+            status[i] = "wrong";
+          }
       }
 
-      await dynamo
-          .put({
-            TableName: "statusTable",
-            Item: {
-              submissionId: submissionID,
-              results: JSON.stringify(results),
-              verdict: status,  //  one string result for each case ie ("compile_error")
-            }
-          })
-          .promise();
+      const dbParams = {
+      TableName: "statusTable",
+          Item: {
+        submissionId: submissionID,
+            results: JSON.stringify(results),
+            verdict: status,  //  one string result for each case ie ("compile_error")
+      }
+    }
+      const dbCommand = new PutItemCommand(dbParams);
+      const response = await db.send(dbCommand);
 
       return {
         statusCode: 500,
@@ -120,14 +119,15 @@ export const lambdaHandler = async (
 
       break;
     case 'GET /submissions/{submissionId}':
-      body = await dynamo
-          .get({
-            TableName: "statusTable",
-            Key: {
-              id: event.pathParameters!.submissionid
-            }
-          })
-          .promise();
+      const dbGetParams = {
+        TableName: "statusTable",
+        Key: {
+          id: event.pathParameters!.submissionid
+        }
+      }
+
+      const getCommand = new GetItemCommand(dbGetParams);
+      const getResponse = await client.send(getCommand);
 
       return {
         statusCode: 500,
@@ -136,7 +136,7 @@ export const lambdaHandler = async (
           "Access-Control-Allow-Origin": "*",
         },
         body: JSON.stringify({
-          body
+            status: getResponse
         })
       };
 
