@@ -1,10 +1,10 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult, AWS } from "aws-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyResult} from "aws-lambda";
 import { buildResponse, extractTimingInfo } from "./utils";
+const AWS = require('aws-sdk')
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { DynamoDBClient, CreateTableCommand, CreateTableCommandInput } from "@aws-sdk/client-dynamodb";
 
-import * as S3 from 'aws-sdk/clients/s3';
-import { uuid } from 'uuidv4';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const client = new LambdaClient({
@@ -38,9 +38,9 @@ export const lambdaHandler = async (
   const requestData = JSON.parse(event.body || "{}");
   let body;
 
-  switch (event.routeKey) {
+  switch (event.httpMethod) {
     case 'POST /submissions': // create a new problem submission (POST)
-      const submissionID = uuid();
+      const submissionID = uuidv4();
       // todo validate structure of body?
 
 
@@ -54,11 +54,11 @@ export const lambdaHandler = async (
         // iterate through map elemntes and run a execute function and process/store the result in an  array
         // return that array to the fromtend...
 
-      let outFiles = [];
-      let inFiles = [];
-      let len:number;
+      let outFiles:string [] = [];
+      let inFiles :string [] = [];
+      let len:number = 0;
 
-      s3.getS3Bucket().listObjects(params, async function (err, data) { // get file content, number of test cases
+      s3.listObjects(params, function (err:any, data:any) { // get file content, number of test cases
         if (err) {
           console.log('There was an error getting your files: ' + err);
           return;
@@ -74,7 +74,7 @@ export const lambdaHandler = async (
             Bucket: 'cpi-onlinejudge',
             Key: file.key // name of the file
           }
-          let data = await s3.getObject(params).promise().Body.toString('utf-8') // get file content
+          let data = s3.getObject(params).promise().Body.toString('utf-8') // get file content
           const dot: number = file.key.indexOf('.');
           const tcNum: number = Number(file.key.substr(0, dot)); // get the tc number as specfied by the fileName.
 
@@ -87,22 +87,8 @@ export const lambdaHandler = async (
       let status: string[] = []; // execute each test case
       for (let i = 1; i <= len; i++) {
         const execData = await execute(requestData, event, inFiles[i]);
-
-        if(typeof execData.statusCode != 'undefined'){
           results[i] = execData.body;
-          status[i] = execData.body.status;
-        }else{
-          results[i] = JSON.parse(
-              Buffer.from(execData).toString()
-          );
-
-          if(execData.stdout == outFiles[i]){
-            status[i] = 'correct_answer';
-          }else{
-            status[i] = 'wrong_answer';
-          }
-
-        }
+          status[i] = JSON.parse(results[i]).status;
       }
 
       await dynamo
@@ -116,12 +102,21 @@ export const lambdaHandler = async (
           })
           .promise();
 
-      return submissionID;
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          submissionId: submissionID
+        })
+      };
       break;
 
     case 'POST /execute':
 
-      return execute(requestData, event);
+      return execute(requestData, event,  requestData.input);
 
       break;
     case 'GET /submissions/{submissionId}':
@@ -129,7 +124,7 @@ export const lambdaHandler = async (
           .get({
             TableName: "statusTable",
             Key: {
-              id: event.pathParameters.submissionid
+              id: event.pathParameters!.submissionid
             }
           })
           .promise();
@@ -161,7 +156,7 @@ export const lambdaHandler = async (
 
 };
 
-const execute = async (requestData, event, input) => {
+const execute = async (requestData:any, event:APIGatewayProxyEvent, input:string) => {
   if (!requestData.language) {
     return {
       statusCode: 400,
@@ -269,7 +264,7 @@ const execute = async (requestData, event, input) => {
     memory,
   } = extractTimingInfo(executeData.stderr);
 
-  let requestJSON = JSON.parse(event.body);
+
 
 
   // 124 is the exit code returned by linux `timeout` command

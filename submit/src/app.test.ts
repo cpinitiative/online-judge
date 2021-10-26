@@ -8,6 +8,7 @@ describe("C++", () => {
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
+        problemid: "blist",
         sourceCode:
           "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}",
         input: "1 2 3",

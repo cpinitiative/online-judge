@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.34.0",
-    "source-map-support": "^0.5.20"
+    "aws-sdk": "^2.1014.0",
+    "source-map-support": "^0.5.20",
+    "uuid": "^8.3.2"
   },
   "scripts": {
     "build": "node_modules/typescript/bin/tsc -p tsconfig.build.json",

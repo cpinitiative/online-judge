@@ -92,18 +92,14 @@ DynamoDBTable:
       KeySchema:
         - AttributeName: submissionId
           KeyType: HASH
-        - AttributeName: problemId
+        - AttributeName: results
           KeyType: HASH
-        - AttributeName: timestamp
+        - AttributeName: verdict
           KeyType: HASH
-        - AttributeName: compileOutput
-          KeyType: HASH
-        - AttributeName: status
-          KeyType: HASH
-
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+#
+#      ProvisionedThroughput:
+#        ReadCapacityUnits: 5
+#        WriteCapacityUnits: 5
       StreamSpecification:
         StreamViewType: NEW_IMAGE
 
