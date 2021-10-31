@@ -43,6 +43,9 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName:
               !Ref ExecuteFunction
+        - DynamoDBCrudPolicy:
+            TableName:
+              !Ref StatisticsDynamoDBTable
       Events:
         Execute:
           Type: Api
@@ -62,17 +65,26 @@ Resources:
     Metadata:
       BuildMethod: makefile
 
+  StatisticsDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      TableName: online-judge-statistics
+      AttributeDefinitions: 
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema: 
+        - AttributeName: id
+          KeyType: HASH
+
 
 Outputs:
   ExecuteFunction:
     Description: "Execute Lambda Function ARN"
     Value: !GetAtt ExecuteFunction.Arn
-  ExecuteFunctionIamRole:
-    Description: "Implicit IAM Role created for Execute function"
-    Value: !GetAtt ExecuteFunctionRole.Arn
   SubmitFunction:
     Description: "Submit Lambda Function ARN"
     Value: !GetAtt SubmitFunction.Arn
-  SubmitFunctionIamRole:
-    Description: "Implicit IAM Role created for Submit function"
-    Value: !GetAtt SubmitFunctionRole.Arn
+  StatisticsDynamoDBTable:
+    Description: "Statistics Dyanmo DB Table ARN"
+    Value: !GetAtt StatisticsDynamoDBTable.Arn

@@ -2,6 +2,7 @@
   "name": "submit-lambda",
   "version": "0.1.0",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.39.0",
     "@aws-sdk/client-lambda": "^3.34.0",
     "source-map-support": "^0.5.20"
   },
