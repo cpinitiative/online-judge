@@ -85,7 +85,7 @@ DynamoDBTable:
         - AttributeName: submissionId
           AttributeType: S
         - AttributeName: results
-          AttributeType: S
+          AttributeType: SS
         - AttributeName: verdict
           AttributeType: SS
 
