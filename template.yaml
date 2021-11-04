@@ -52,7 +52,6 @@ Resources:
         CreateSubmission:
           Type: Api
           Properties:
-            Path: /submissions
             Method: post
         GetSubmission:
           Type: Api
@@ -61,47 +60,6 @@ Resources:
             Method: get
     Metadata:
       BuildMethod: makefile
-    ProcessDynamoDBStream:
-      Type: AWS::Serverless::Function
-      Properties:
-        Handler: handler
-        Runtime: runtime
-        Policies: AWSLambdaDynamoDBExecutionRole
-        Events:
-          Stream:
-            Type: DynamoDB
-            Properties:
-              Stream: !GetAtt DynamoDBTable.StreamArn
-              BatchSize: 100
-              StartingPosition: TRIM_HORIZON
-
-TestCaseBucket:
-  Type: AWS::S3::Bucket
-DynamoDBTable:
-  Type: AWS::DynamoDB::Table
-  Properties:
-      TableName: statusTable
-      AttributeDefinitions:
-        - AttributeName: submissionId
-          AttributeType: S
-        - AttributeName: results
-          AttributeType: SS
-        - AttributeName: verdict
-          AttributeType: SS
-
-      KeySchema:
-        - AttributeName: submissionId
-          KeyType: HASH
-        - AttributeName: results
-          KeyType: HASH
-        - AttributeName: verdict
-          KeyType: HASH
-#
-#      ProvisionedThroughput:
-#        ReadCapacityUnits: 5
-#        WriteCapacityUnits: 5
-      StreamSpecification:
-        StreamViewType: NEW_IMAGE
 
 
 Outputs:

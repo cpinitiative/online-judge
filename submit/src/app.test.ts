@@ -2,7 +2,7 @@ import * as app from "./app";
 import { generateRequest } from "./testUtils";
 
 describe("C++", () => {
-  it("compiles and runs c++", async () => {
+  it("compiles and runs", async () => {
     const result = await app.lambdaHandler(
       generateRequest({
         language: "cpp",

@@ -11,7 +11,7 @@ const baseAPIGatewayRequest = {
   "body": "eyJ0ZXN0IjoiYm9keSJ9",
   "resource": "/{proxy+}",
   "path": "/path/to/resource",
-  "httpMethod": "POST /submissions",
+  "httpMethod": "POST",
   "isBase64Encoded": true,
   "queryStringParameters": {
     "foo": "bar"
@@ -125,7 +125,7 @@ const baseAPIGatewayRequest = {
     },
     "path": "/prod/path/to/resource",
     "resourcePath": "/{proxy+}",
-    "httpMethod": "POST /execute",
+    "httpMethod": "POST",
     "apiId": "1234567890",
     "protocol": "HTTP/1.1",
   }
