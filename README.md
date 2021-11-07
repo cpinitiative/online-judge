@@ -56,6 +56,10 @@ sam build
 
 ### Testing locally
 
+#### Setting up DynamoDB Locally
+
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html
+
 #### Testing Execution Lambda (Compile) locally
 
 You can change the event JSON file accordingly to test various parts of the execution lambda.
@@ -72,6 +76,10 @@ sam build --cached --parallel && sam local invoke ExecuteFunction -e execute/eve
 4. Make a request to `http://localhost:3000/execute` or the appropriate API route
 
 You don't have to rerun `sam local start-api` when your code changes. Note that the execute lambda this calls is the execution lambda that's currently deployed on AWS, not the local execution lambda.
+
+---
+
+Alternatively, you can run `npm run watch` followed by `node dist/src/runLambdaLocally.js` if you don't want to have to make a request to the API route.
 
 #### Unit Tests with Jest
 
