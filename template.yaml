@@ -52,6 +52,7 @@ Resources:
         CreateSubmission:
           Type: Api
           Properties:
+            Path: /submissions
             Method: post
         GetSubmission:
           Type: Api

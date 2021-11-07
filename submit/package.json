@@ -2,10 +2,7 @@
   "name": "submit-lambda",
   "version": "0.1.0",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.39.0",
     "@aws-sdk/client-lambda": "^3.34.0",
-    "@aws-sdk/client-s3": "^3.38.0",
-    "@types/readable-stream": "^2.3.11",
     "dotenv": "^10.0.0",
     "source-map-support": "^0.5.20",
     "uuid": "^8.3.2"
@@ -16,10 +13,13 @@
     "test": "jest"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.40.0",
+    "@aws-sdk/client-s3": "^3.40.0",
     "@tsconfig/node14": "^1.0.1",
     "@types/aws-lambda": "^8.10.83",
     "@types/jest": "^27.0.2",
     "@types/node": "^16.10.1",
+    "@types/readable-stream": "^2.3.11",
     "jest": "^27.2.2",
     "prettier": "^2.4.1",
     "ts-jest": "^27.0.5",

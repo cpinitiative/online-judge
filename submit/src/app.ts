@@ -43,8 +43,8 @@ export const lambdaHandler = async (
   const requestData = JSON.parse(event.body || "{}");
   let body;
 
-  switch (event.httpMethod) {
-    case 'POST': // create a new problem submission (POST)
+  switch (event.httpMethod + " " + event.resource) {
+    case 'POST /submissions': // create a new problem submission (POST)
       const submissionID = uuidv4();
       // todo validate structure of body?
 
@@ -54,10 +54,6 @@ export const lambdaHandler = async (
         Delimiter: '/',
         Prefix: requestData.problemid
       };
-
-      // store expected in and put in a map
-      // iterate through map elemntes and run a execute function and process/store the result in an  array
-      // return that array to the fromtend...
 
       let outFiles:string [] = [];
       let inFiles :string [] = [];
@@ -78,6 +74,7 @@ export const lambdaHandler = async (
         const rawFileContent = await streamToString(stream);
         let processedContent = rawFileContent.trim();
 
+        // process file name to extract test_case number
         const dot: number = file.Key.indexOf('.');
         const slash:number = file.Key.indexOf('/');
         const tcNum: number = Number(file.Key.substr(slash+1,  dot - (slash+1))); // get the tc number as specfied by the fileName.

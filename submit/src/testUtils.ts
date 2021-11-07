@@ -9,7 +9,7 @@ export const generateRequest = (data: object): APIGatewayProxyEvent => {
 
 const baseAPIGatewayRequest = {
   "body": "eyJ0ZXN0IjoiYm9keSJ9",
-  "resource": "/{proxy+}",
+  "resource": "/submissions",
   "path": "/path/to/resource",
   "httpMethod": "POST",
   "isBase64Encoded": true,
