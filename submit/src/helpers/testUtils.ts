@@ -1,4 +1,16 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import * as app from "../app";
+
+export const appHandlerPromise = (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  return new Promise((resolve, reject) => {
+    app.lambdaHandler(event, null, (error, result) => {
+      if (error) reject(error);
+      else resolve(result!);
+    });
+  });
+};
 
 export const generateCodeExecutionRequest = (
   data: object
@@ -15,7 +27,7 @@ export const generateProblemSubmissionRequest = (
 ): APIGatewayProxyEvent => {
   return {
     ...baseAPIGatewayRequest,
-    resource: "/submission",
+    resource: "/submissions",
     body: JSON.stringify(data),
   } as any; // there's some sketchy typescript bug that I think is irrelevant...
 };

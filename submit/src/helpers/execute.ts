@@ -1,6 +1,6 @@
 import { InvokeCommand } from "@aws-sdk/client-lambda";
 import { lambdaClient } from "../clients";
-import { CodeExecutionRequestData, ExecuteResult } from "../types";
+import { CodeExecutionRequestData, CodeExecutionResult } from "../types";
 import updateCodeExecutionStatistics from "./updateCodeExecutionStatistics";
 import { buildResponse, extractTimingInfo } from "./utils";
 
@@ -78,7 +78,7 @@ export default async function execute(
     ),
   });
   const executeResponse = await lambdaClient.send(executeCommand);
-  const executeData: ExecuteResult = JSON.parse(
+  const executeData: CodeExecutionResult = JSON.parse(
     Buffer.from(executeResponse.Payload!).toString()
   );
 

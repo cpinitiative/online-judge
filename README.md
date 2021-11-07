@@ -122,6 +122,8 @@ The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.co
 - `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups
 - `GET /submissions/{submissionID}` (under development): Get the status of the submission associated with the given submission ID
 
+Until API docs can be properly written, you can refer to `submit/src/types.ts` to get an idea of the payload and the response types.
+
 Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
 
 ## Misc Notes

@@ -52,6 +52,8 @@ export const lambdaHandler = (
       }
       break;
 
+    // future improvement: support ?fields=[listOfFields] to reduce network size?
+    // especially since sending input / output / expected output / stderr for every test case is big
     case "GET /submissions/{submissionID}":
       // todo verify submissionID not null?
       getSubmission(event.pathParameters!.submissionID!)

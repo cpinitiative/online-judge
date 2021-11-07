@@ -1,21 +1,11 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import * as app from "./app";
-import { generateCodeExecutionRequest } from "./helpers/testUtils";
-
-const promiseHandler = (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  return new Promise((resolve, reject) => {
-    app.lambdaHandler(event, null, (error, result) => {
-      if (error) reject(error);
-      else resolve(result!);
-    });
-  });
-};
+import {
+  appHandlerPromise,
+  generateCodeExecutionRequest,
+} from "./helpers/testUtils";
 
 describe("C++", () => {
   it("compiles and runs", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
@@ -34,7 +24,7 @@ describe("C++", () => {
   });
 
   it("throws compilation error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
@@ -59,7 +49,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("throws TLE error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
@@ -83,7 +73,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   }, 8000);
 
   it("throws RTE error (assertion)", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
@@ -102,7 +92,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("throws RTE error (segfault)", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
@@ -120,7 +110,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("respects fsanitize flag (negative index)", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "-fsanitize=undefined",
@@ -148,7 +138,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("respects fsanitize flag (array index out of bounds)", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "-fsanitize=undefined",
@@ -176,7 +166,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("respects fsanitize=address flag", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "-fsanitize=address",
@@ -208,7 +198,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
 
 describe("Java", () => {
   it("compiles and runs", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
@@ -236,7 +226,7 @@ describe("Java", () => {
   });
 
   it("throws compilation error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
@@ -269,7 +259,7 @@ Object {
   });
 
   it("throws TLE error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
@@ -308,7 +298,7 @@ Command exited with non-zero status 1
   }, 8000);
 
   it("throws RTE error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
@@ -348,7 +338,7 @@ Command exited with non-zero status 1
 
 describe("Python", () => {
   it("compiles and runs", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "py",
         compilerOptions: "",
@@ -367,7 +357,7 @@ print(a + b + c)`,
   });
 
   it("throws TLE error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "py",
         compilerOptions: "",
@@ -395,7 +385,7 @@ print(a + b + c)`,
   }, 8000);
 
   it("throws RTE error", async () => {
-    const result = await promiseHandler(
+    const result = await appHandlerPromise(
       generateCodeExecutionRequest({
         language: "py",
         compilerOptions: "",
