@@ -2,7 +2,7 @@
 // Run `npm run watch` followed by `node dist/src/runLambdaLocally.js`
 
 import * as app from "./app";
-import { generateRequest } from "./testUtils";
+import { generateRequest } from "./helpers/testUtils";
 
 process.env.NODE_ENV = "test";
 
