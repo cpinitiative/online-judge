@@ -7,7 +7,7 @@ import { generateRequest } from "./helpers/testUtils";
 process.env.NODE_ENV = "test";
 
 (async () => {
-  const result = await app.lambdaHandler(
+  app.lambdaHandler(
     generateRequest({
       language: "cpp",
       compilerOptions: "",
@@ -15,8 +15,10 @@ process.env.NODE_ENV = "test";
       sourceCode:
         "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}",
       input: "1 2 3",
-    })
+    }),
+    null,
+    (error, result) => {
+      console.log(result);
+    }
   );
-
-  console.log(result);
 })();

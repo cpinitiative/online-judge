@@ -1,20 +1,33 @@
 import { APIGatewayProxyEvent } from "aws-lambda";
 
-export const generateRequest = (data: object): APIGatewayProxyEvent => {
+export const generateCodeExecutionRequest = (
+  data: object
+): APIGatewayProxyEvent => {
   return {
     ...baseAPIGatewayRequest,
+    resource: "/execute",
+    body: JSON.stringify(data),
+  } as any; // there's some sketchy typescript bug that I think is irrelevant...
+};
+
+export const generateProblemSubmissionRequest = (
+  data: object
+): APIGatewayProxyEvent => {
+  return {
+    ...baseAPIGatewayRequest,
+    resource: "/submission",
     body: JSON.stringify(data),
   } as any; // there's some sketchy typescript bug that I think is irrelevant...
 };
 
 const baseAPIGatewayRequest = {
-  "body": "eyJ0ZXN0IjoiYm9keSJ9",
-  "resource": "/submissions",
-  "path": "/path/to/resource",
-  "httpMethod": "POST",
-  "isBase64Encoded": true,
-  "queryStringParameters": {
-    "foo": "bar"
+  body: "eyJ0ZXN0IjoiYm9keSJ9",
+  resource: "/path/to/resource",
+  path: "/path/to/resource",
+  httpMethod: "POST",
+  isBase64Encoded: true,
+  queryStringParameters: {
+    foo: "bar",
   },
   multiValueQueryStringParameters: {
     foo: ["bar"],

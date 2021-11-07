@@ -60,7 +60,7 @@ Resources:
         GetSubmission:
           Type: Api
           Properties:
-            Path: /submissions/{submissionId}
+            Path: /submissions/{submissionID}
             Method: get
     Metadata:
       BuildMethod: makefile

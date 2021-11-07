@@ -120,7 +120,7 @@ The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.co
 
 - `POST /execute`: Code execution. Ex: USACO Guide IDE.
 - `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups
-- `GET /submissions/{submissionId}` (under development): Get the status of the submission associated with the given submission ID
+- `GET /submissions/{submissionID}` (under development): Get the status of the submission associated with the given submission ID
 
 Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
 
