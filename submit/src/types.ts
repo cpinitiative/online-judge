@@ -18,7 +18,7 @@ export interface CodeExecutionResult {
 
 export interface ProblemSubmissionRequestData {
   problemID: string;
-  language: string;
+  language: "cpp" | "java" | "py";
   filename: string;
   sourceCode: string;
 }
@@ -47,4 +47,11 @@ export interface ProblemSubmissionTestCaseResult {
   stderr: string;
 }
 
-export type ExecutionVerdict = "AC" | "WA" | "RTE" | "MLE" | "TLE" | "CE"; // IE is internal error
+export type ExecutionVerdict =
+  | "AC"
+  | "WA"
+  | "RTE"
+  | "MLE"
+  | "TLE"
+  | "CE"
+  | "IE"; // IE is internal error

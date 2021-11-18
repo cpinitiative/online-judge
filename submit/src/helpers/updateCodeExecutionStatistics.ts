@@ -2,9 +2,9 @@ import { UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { dbClient } from "../clients";
 import { CodeExecutionRequestData } from "../types";
 
-export default async function updateCodeExecutionStatistics(
-  requestData: CodeExecutionRequestData
-) {
+export default async function updateCodeExecutionStatistics(requestData: {
+  language: "cpp" | "java" | "py";
+}) {
   // we don't want to update execution statistics when running test code (like Jest)
   if (process.env.NODE_ENV === "test") return;
 

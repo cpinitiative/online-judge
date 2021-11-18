@@ -1,4 +1,5 @@
 import { APIGatewayProxyResult } from "aws-lambda";
+import type { Readable } from "stream";
 
 export const extractTimingInfo = (
   data: string | null
@@ -57,3 +58,12 @@ export const buildResponse = (
     ...(extraData || {}),
   };
 };
+
+export async function streamToString(stream: Readable): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+  });
+}

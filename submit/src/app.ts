@@ -5,11 +5,12 @@ import type {
   APIGatewayProxyCallback,
 } from "aws-lambda";
 import execute from "./helpers/execute";
-import getSubmission from "./helpers/getSubmission";
-import createSubmission from "./helpers/createSubmission";
+import getSubmission from "./problemSubmission/getSubmission";
+import createSubmission from "./problemSubmission/createSubmission";
 import { buildResponse } from "./helpers/utils";
-
-// Note: for problem submission, some flags to keep in mind: http://usaco.org/index.php?page=instructions
+import compile from "./helpers/compile";
+import { PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { dbClient } from "./clients";
 
 export const lambdaHandler = (
   event: APIGatewayProxyEvent,
@@ -18,18 +19,57 @@ export const lambdaHandler = (
 ) => {
   const requestData = JSON.parse(event.body || "{}");
 
+  // todo validate with zod?
+
   switch (event.httpMethod + " " + event.resource) {
     case "POST /submissions":
       // todo validate structure of body?
       const submissionID = uuidv4();
-      createSubmission(submissionID, requestData);
 
-      callback(
-        null,
-        buildResponse({
-          submissionID,
+      const dbCommand = new PutItemCommand({
+        TableName: "online-judge",
+        Item: {
+          submissionID: {
+            S: submissionID,
+          },
+          status: {
+            S: "compiling",
+          },
+          testCases: {
+            L: [],
+          },
+          problemID: {
+            S: requestData.problemID,
+          },
+          language: {
+            S: requestData.language,
+          },
+          filename: {
+            S: requestData.filename,
+          },
+          sourceCode: {
+            S: requestData.sourceCode,
+          },
+        },
+      });
+      dbClient
+        .send(dbCommand)
+        .then(() => {
+          const promise = createSubmission(submissionID, requestData);
+
+          callback(
+            null,
+            buildResponse({
+              submissionID,
+            })
+          );
+
+          return promise;
         })
-      );
+        .catch((e) => {
+          // todo update item status?
+          callback(e);
+        });
 
       break;
 
@@ -46,8 +86,23 @@ export const lambdaHandler = (
           )
         );
       } else {
-        execute(requestData, requestData.input)
-          .then((resp) => callback(null, resp))
+        compile(requestData)
+          .then((compiled) => {
+            if (
+              compiled.status === "internal_error" ||
+              compiled.status === "compile_error"
+            ) {
+              return compiled;
+            }
+            return execute(compiled.output, requestData.input, requestData);
+          })
+          .then((result) => {
+            if (result.status === "internal_error") {
+              callback(null, buildResponse(result, { statusCode: 500 }));
+            } else {
+              callback(null, buildResponse(result));
+            }
+          })
           .catch((error) => callback(error));
       }
       break;

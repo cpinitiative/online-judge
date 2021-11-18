@@ -12,7 +12,7 @@ describe("C++", () => {
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
-        problemid: "usaco-1111/",
+        problemid: "usaco-1111",
         sourceCode: readFileSync(
           path.join(__dirname, "testFiles/cpp_1111_ac.cpp")
         ),
