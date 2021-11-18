@@ -125,8 +125,8 @@ export default async function createSubmission(
             requestData,
             problemTimeout
           );
-        } catch (e: any) {
-          if (e.code === "EAI_AGAIN") {
+        } catch (e) {
+          if (e instanceof Error && e.message.indexOf("EAI_AGAIN") !== -1) {
             // I encounter this DNS error when connected to NordVPN and trying to send
             // many lambda requests at once. As a workaround, when I encounter this error,
             // I just delay it by a certain amount of time.
@@ -242,7 +242,7 @@ export default async function createSubmission(
             S: submissionID,
           },
         },
-        UpdateExpression: `SET verdict = :verdict, #status = :status`,
+        UpdateExpression: `SET verdict = :verdict, #status = :status, message = :message, debugData = :debugData`,
         ExpressionAttributeNames: {
           "#status": "status",
         },

@@ -3,6 +3,8 @@ import path from "path";
 import {
   appHandlerPromise,
   generateProblemSubmissionRequest,
+  jestCheckSubmission,
+  waitForSubmissionFinish,
 } from "./helpers/testUtils";
 
 describe("C++", () => {
@@ -10,16 +12,29 @@ describe("C++", () => {
     const result = await appHandlerPromise(
       generateProblemSubmissionRequest({
         language: "cpp",
-        compilerOptions: "",
         filename: "main.cpp",
-        problemid: "usaco-1111",
+        problemID: "usaco-1111",
         sourceCode: readFileSync(
           path.join(__dirname, "testFiles/cpp_1111_ac.cpp")
-        ),
+        ).toString(),
       })
     );
     const data = JSON.parse(result.body);
-    console.log(data);
-    // todo actually fetch submission info and test
-  }, 100000);
+    jestCheckSubmission(await waitForSubmissionFinish(data.submissionID));
+  }, 18000);
+
+  it("handles WA", async () => {
+    const result = await appHandlerPromise(
+      generateProblemSubmissionRequest({
+        language: "cpp",
+        filename: "main.cpp",
+        problemID: "usaco-1111",
+        sourceCode: readFileSync(
+          path.join(__dirname, "testFiles/cpp_1111_wa.cpp")
+        ).toString(),
+      })
+    );
+    const data = JSON.parse(result.body);
+    jestCheckSubmission(await waitForSubmissionFinish(data.submissionID));
+  }, 18000);
 });

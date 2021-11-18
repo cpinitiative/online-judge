@@ -120,40 +120,6 @@ export const lambdaHandler = (
     case "GET /submissions/{submissionID}":
       getSubmission(event.pathParameters!.submissionID!)
         .then((response) => {
-          const data: ProblemSubmissionResult = {
-            submissionID: response!.submissionID.S!,
-            status: response!.status.S! as "compiling" | "executing" | "done",
-            problemID: response!.problemID.S!,
-            language: response!.language.S!,
-            filename: response!.filename.S!,
-            sourceCode: decompress(response!.sourceCode.B!),
-            testCases:
-              response!.testCases.L!.map<ProblemSubmissionTestCaseResult>(
-                (tc) => ({
-                  verdict: tc.M!.verdict.S! as ExecutionVerdict,
-                  time: tc.M!.time.S!,
-                  memory: tc.M!.memory.S!,
-                  input: decompress(tc.M!.input.B!),
-                  expectedOutput: decompress(tc.M!.expectedOutput.B!),
-                  stdout: decompress(tc.M!.stdout.B!),
-                  stderr: decompress(tc.M!.stderr.B!),
-                })
-              ),
-          };
-
-          if (response!.message) {
-            data.message = decompress(response!.message.B!);
-          }
-          if (response!.verdict) {
-            data.verdict = response!.verdict.S as ExecutionVerdict;
-          }
-          if (response!.debugData) {
-            data.debugData = decompress(response!.debugData!.B!);
-          }
-
-          return data;
-        })
-        .then((response) => {
           callback(
             null,
             buildResponse(response, {

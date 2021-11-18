@@ -33,27 +33,14 @@ process.env.NODE_ENV = "test";
   // Problem Submission: Fetch test cases
   // console.log(await fetchProblemTestCases("usaco-1111"));
   // Problem Submission: complete
-  // app.lambdaHandler(
-  //   generateProblemSubmissionRequest({
-  //     language: "cpp",
-  //     compilerOptions: "",
-  //     filename: "main.cpp",
-  //     sourceCode:
-  //       "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}",
-  //     problemID: "usaco-1111",
-  //   }),
-  //   null,
-  //   (error, result) => {
-  //     if (error) {
-  //       console.error(error);
-  //     } else {
-  //       console.log(result);
-  //     }
-  //   }
-  // );
-  // Problem Submission: Get submission
   app.lambdaHandler(
-    generateGetProblemSubmissionRequest("1c33a59f-35d5-40d4-9baf-d586bab04ff6"),
+    generateProblemSubmissionRequest({
+      language: "cpp",
+      filename: "main.cpp",
+      sourceCode:
+        "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}",
+      problemID: "usaco-1111",
+    }),
     null,
     (error, result) => {
       if (error) {
@@ -63,4 +50,16 @@ process.env.NODE_ENV = "test";
       }
     }
   );
+  // Problem Submission: Get submission
+  // app.lambdaHandler(
+  //   generateGetProblemSubmissionRequest("1c33a59f-35d5-40d4-9baf-d586bab04ff6"),
+  //   null,
+  //   (error, result) => {
+  //     if (error) {
+  //       console.error(error);
+  //     } else {
+  //       console.log(result);
+  //     }
+  //   }
+  // );
 })();

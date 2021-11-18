@@ -1,5 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { check } from "prettier";
 import * as app from "../app";
+import getSubmission from "../problemSubmission/getSubmission";
+import {
+  ProblemSubmissionRequestData,
+  ProblemSubmissionResult,
+} from "../types";
 
 export const appHandlerPromise = (
   event: APIGatewayProxyEvent
@@ -23,7 +29,7 @@ export const generateCodeExecutionRequest = (
 };
 
 export const generateProblemSubmissionRequest = (
-  data: object
+  data: ProblemSubmissionRequestData
 ): APIGatewayProxyEvent => {
   return {
     ...baseAPIGatewayRequest,
@@ -43,6 +49,39 @@ export const generateGetProblemSubmissionRequest = (
       submissionID,
     },
   } as any; // there's some sketchy typescript bug that I think is irrelevant...
+};
+
+export const waitForSubmissionFinish = (
+  submissionID: string
+): Promise<ProblemSubmissionResult> => {
+  return new Promise((resolve, reject) => {
+    const check = (tries: number) => {
+      // shouldn't take more than 10 seconds
+      if (tries > 10) {
+        reject(
+          new Error(
+            "Submission " + submissionID + " didn't finish after 10 seconds"
+          )
+        );
+        return;
+      }
+      setTimeout(() => {
+        getSubmission(submissionID)
+          .then((val) => {
+            if (val.status === "done") resolve(val);
+            else check(tries + 1);
+          })
+          .catch(reject);
+      }, 1000);
+    };
+    check(0);
+  });
+};
+
+export const jestCheckSubmission = (submission: ProblemSubmissionResult) => {
+  const { submissionID, testCases, ...submissionToCheck } = submission;
+  expect(submissionToCheck).toMatchSnapshot();
+  testCases.forEach(({ time, memory, ...tc }) => expect(tc).toMatchSnapshot());
 };
 
 const baseAPIGatewayRequest = {
