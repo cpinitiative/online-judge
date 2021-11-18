@@ -1,17 +1,13 @@
-import { dbClient, s3Client } from "../clients";
+import { dbClient } from "../clients";
 import { ProblemSubmissionRequestData } from "../types";
 import {
-  PutItemCommand,
   UpdateItemCommand,
   UpdateItemCommandInput,
 } from "@aws-sdk/client-dynamodb";
-import { ListObjectsCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { Readable } from "stream";
 import execute from "../helpers/execute";
 import fetchProblemTestCases from "./fetchProblemTestCases";
 import compile from "../helpers/compile";
 import { compress } from "../helpers/utils";
-const crypto = require("crypto");
 
 const statusToVerdictMapping: { [key: string]: string } = {
   correct: "AC",
@@ -270,8 +266,11 @@ export default async function createSubmission(
 }
 
 // truncates given string to 4kb. used for input/expected output/etc for problem submission test case result
+// actually, for now, it just returns nothing if > 4kb, becuase for such large test cases
+// people probably wouldn't benefit from it anyway.
 function truncate(data: string) {
-  return data.substring(0, Math.min(data.length, 1024 * 4));
+  if (data.length > 1024 * 4) return "[Truncated]";
+  return data;
 }
 
 function validateOutput(given: string, expected: string) {

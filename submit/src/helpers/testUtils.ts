@@ -32,8 +32,21 @@ export const generateProblemSubmissionRequest = (
   } as any; // there's some sketchy typescript bug that I think is irrelevant...
 };
 
+export const generateGetProblemSubmissionRequest = (
+  submissionID: string
+): APIGatewayProxyEvent => {
+  return {
+    ...baseAPIGatewayRequest,
+    httpMethod: "GET",
+    resource: "/submissions/{submissionID}",
+    pathParameters: {
+      submissionID,
+    },
+  } as any; // there's some sketchy typescript bug that I think is irrelevant...
+};
+
 const baseAPIGatewayRequest = {
-  body: "eyJ0ZXN0IjoiYm9keSJ9",
+  body: "{}",
   resource: "/path/to/resource",
   path: "/path/to/resource",
   httpMethod: "POST",

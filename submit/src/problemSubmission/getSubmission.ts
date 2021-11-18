@@ -5,7 +5,7 @@ export default async function getSubmission(submissionID: string) {
   const dbGetParams = {
     TableName: "online-judge",
     Key: {
-      id: {
+      submissionID: {
         S: submissionID,
       },
     },
@@ -14,5 +14,5 @@ export default async function getSubmission(submissionID: string) {
   const getCommand = new GetItemCommand(dbGetParams);
   const response = await dbClient.send(getCommand);
 
-  return response;
+  return response.Item;
 }

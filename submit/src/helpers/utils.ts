@@ -1,6 +1,6 @@
 import { APIGatewayProxyResult } from "aws-lambda";
 import type { Readable } from "stream";
-import { gzip } from "zlib";
+import { gunzip, gunzipSync, gzip } from "zlib";
 
 export const extractTimingInfo = (
   data: string | null
@@ -76,4 +76,8 @@ export async function compress(data: string): Promise<Buffer> {
       resolve(result);
     });
   });
+}
+
+export function decompress(data: Uint8Array): string {
+  return gunzipSync(data).toString();
 }

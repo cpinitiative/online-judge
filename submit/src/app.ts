@@ -7,10 +7,16 @@ import type {
 import execute from "./helpers/execute";
 import getSubmission from "./problemSubmission/getSubmission";
 import createSubmission from "./problemSubmission/createSubmission";
-import { buildResponse, compress } from "./helpers/utils";
+import { buildResponse, compress, decompress } from "./helpers/utils";
 import compile from "./helpers/compile";
 import { PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { dbClient } from "./clients";
+import {
+  ExecutionVerdict,
+  ProblemSubmissionRequestData,
+  ProblemSubmissionResult,
+  ProblemSubmissionTestCaseResult,
+} from "./types";
 
 // todo: make idempotent?
 export const lambdaHandler = (
@@ -112,13 +118,46 @@ export const lambdaHandler = (
     // future improvement: support ?fields=[listOfFields] to reduce network size?
     // especially since sending input / output / expected output / stderr for every test case is big
     case "GET /submissions/{submissionID}":
-      // todo verify submissionID not null?
       getSubmission(event.pathParameters!.submissionID!)
+        .then((response) => {
+          const data: ProblemSubmissionResult = {
+            submissionID: response!.submissionID.S!,
+            status: response!.status.S! as "compiling" | "executing" | "done",
+            problemID: response!.problemID.S!,
+            language: response!.language.S!,
+            filename: response!.filename.S!,
+            sourceCode: decompress(response!.sourceCode.B!),
+            testCases:
+              response!.testCases.L!.map<ProblemSubmissionTestCaseResult>(
+                (tc) => ({
+                  verdict: tc.M!.verdict.S! as ExecutionVerdict,
+                  time: tc.M!.time.S!,
+                  memory: tc.M!.memory.S!,
+                  input: decompress(tc.M!.input.B!),
+                  expectedOutput: decompress(tc.M!.expectedOutput.B!),
+                  stdout: decompress(tc.M!.stdout.B!),
+                  stderr: decompress(tc.M!.stderr.B!),
+                })
+              ),
+          };
+
+          if (response!.message) {
+            data.message = decompress(response!.message.B!);
+          }
+          if (response!.verdict) {
+            data.verdict = response!.verdict.S as ExecutionVerdict;
+          }
+          if (response!.debugData) {
+            data.debugData = decompress(response!.debugData!.B!);
+          }
+
+          return data;
+        })
         .then((response) => {
           callback(
             null,
             buildResponse(response, {
-              statusCode: 500,
+              statusCode: 200,
             })
           );
         })
