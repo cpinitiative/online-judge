@@ -7,11 +7,12 @@ import type {
 import execute from "./helpers/execute";
 import getSubmission from "./problemSubmission/getSubmission";
 import createSubmission from "./problemSubmission/createSubmission";
-import { buildResponse } from "./helpers/utils";
+import { buildResponse, compress } from "./helpers/utils";
 import compile from "./helpers/compile";
 import { PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { dbClient } from "./clients";
 
+// todo: make idempotent?
 export const lambdaHandler = (
   event: APIGatewayProxyEvent,
   context: APIGatewayEventRequestContext | null, // null for testing
@@ -26,34 +27,36 @@ export const lambdaHandler = (
       // todo validate structure of body?
       const submissionID = uuidv4();
 
-      const dbCommand = new PutItemCommand({
-        TableName: "online-judge",
-        Item: {
-          submissionID: {
-            S: submissionID,
-          },
-          status: {
-            S: "compiling",
-          },
-          testCases: {
-            L: [],
-          },
-          problemID: {
-            S: requestData.problemID,
-          },
-          language: {
-            S: requestData.language,
-          },
-          filename: {
-            S: requestData.filename,
-          },
-          sourceCode: {
-            S: requestData.sourceCode,
-          },
-        },
-      });
-      dbClient
-        .send(dbCommand)
+      compress(requestData.sourceCode)
+        .then((compressedSourceCode) => {
+          const dbCommand = new PutItemCommand({
+            TableName: "online-judge",
+            Item: {
+              submissionID: {
+                S: submissionID,
+              },
+              status: {
+                S: "compiling",
+              },
+              testCases: {
+                L: [],
+              },
+              problemID: {
+                S: requestData.problemID,
+              },
+              language: {
+                S: requestData.language,
+              },
+              filename: {
+                S: requestData.filename,
+              },
+              sourceCode: {
+                B: compressedSourceCode,
+              },
+            },
+          });
+          return dbClient.send(dbCommand);
+        })
         .then(() => {
           const promise = createSubmission(submissionID, requestData);
 
@@ -67,7 +70,6 @@ export const lambdaHandler = (
           return promise;
         })
         .catch((e) => {
-          // todo update item status?
           callback(e);
         });
 

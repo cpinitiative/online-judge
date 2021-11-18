@@ -25,14 +25,16 @@ export interface ProblemSubmissionRequestData {
 
 export interface ProblemSubmissionResult {
   submissionID: string;
-  status: "compiling" | "executing" | "done" | "internal_error";
-  verdict: ExecutionVerdict;
+  status: "compiling" | "executing" | "done";
+  verdict?: ExecutionVerdict;
   testCases: ProblemSubmissionTestCaseResult[];
 
   problemID: string;
   language: string;
   filename: string;
   sourceCode: string; // gzipped in dynamodb
+  message?: string; // gzipped in dynamodb. used either for compiling or internal error.
+  debugData?: string; // gzipped in dynamodb. optionally provided for internal_error
 }
 
 export interface ProblemSubmissionTestCaseResult {

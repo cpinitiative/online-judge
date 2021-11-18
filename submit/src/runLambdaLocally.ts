@@ -1,7 +1,10 @@
 // This file runs app.ts locally, and does not need AWS SAM to work
 // Run `npm run watch` followed by `node dist/src/runLambdaLocally.js`
 
+import { InvokeCommand } from "@aws-sdk/client-lambda";
 import * as app from "./app";
+import { lambdaClient } from "./clients";
+import execute from "./helpers/execute";
 import {
   generateCodeExecutionRequest,
   generateProblemSubmissionRequest,
@@ -42,7 +45,11 @@ process.env.NODE_ENV = "test";
     }),
     null,
     (error, result) => {
-      console.log(result);
+      if (error) {
+        console.error(error);
+      } else {
+        console.log(result);
+      }
     }
   );
 })();
