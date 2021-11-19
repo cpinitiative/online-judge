@@ -35,17 +35,17 @@ export type CompilationResult =
        */
       message: string;
     }
-  | ({
+  | {
       status: "compile_error";
       message: string;
-    })
+    }
   | {
       status: "success";
       /**
        * Base64 encoded ZIP file containing the output
        */
       output: string;
-      processOutput: ExecuteProcessOutput | null,
+      processOutput: ExecuteProcessOutput | null;
     };
 
 export type ExecutionResult =
@@ -53,13 +53,16 @@ export type ExecutionResult =
       status: "success";
     } & ExecuteProcessOutput;
 
-const MAX_BUFFER_SIZE = 1024*1024*30; // 30mb. note that 6mb is API gateway limit for lambda
+const MAX_BUFFER_SIZE = 1024 * 1024 * 30; // 30mb. note that 6mb is API gateway limit for lambda
 
 export const lambdaHandler = async function (
   event: ExecuteEvent
 ): Promise<CompilationResult | ExecutionResult> {
   if (existsSync("/tmp/out")) {
     rmdirSync("/tmp/out", { recursive: true });
+  }
+  if (existsSync("/tmp/program")) {
+    rmdirSync("/tmp/program", { recursive: true });
   }
   mkdirSync("/tmp/out");
 
@@ -84,7 +87,9 @@ export const lambdaHandler = async function (
     }
 
     // if process.env.AWS_EXECUTION_ENV is set, then we're running in Amazon Linux 2, which has a special path to g++
-    const cppCompilationCommand = process.env.AWS_EXECUTION_ENV ? "/opt/rh/devtoolset-10/root/usr/bin/g++" : "g++",
+    const cppCompilationCommand = process.env.AWS_EXECUTION_ENV
+        ? "/opt/rh/devtoolset-10/root/usr/bin/g++"
+        : "g++",
       javaCompilationCommand = "javac";
     const cppCompilationOptions = ["-o", "/tmp/out/prog"],
       javaCompilationOptions = ["-d", "/tmp/out"];
@@ -128,12 +133,17 @@ export const lambdaHandler = async function (
     writeFileSync("/tmp/program.zip", event.payload, "base64");
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
 
-    const spawnResult = spawnSync(`/usr/bin/time -v /usr/bin/timeout ${((event.timeout ?? 5000)/1000).toFixed(3)}s sh /tmp/program/run.sh`, {
-      cwd: "/tmp/program",
-      input: event.input,
-      shell: true,
-      maxBuffer: MAX_BUFFER_SIZE
-    });
+    const spawnResult = spawnSync(
+      `/usr/bin/time -v /usr/bin/timeout ${(
+        (event.timeout ?? 5000) / 1000
+      ).toFixed(3)}s sh /tmp/program/run.sh`,
+      {
+        cwd: "/tmp/program",
+        input: event.input,
+        shell: true,
+        maxBuffer: MAX_BUFFER_SIZE,
+      }
+    );
 
     unlinkSync("/tmp/program.zip");
     rmdirSync("/tmp/program", { recursive: true });

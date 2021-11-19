@@ -257,7 +257,7 @@ export default async function createSubmission(
             S: "done",
           },
           ":message": {
-            S: "An unknown internal error occurred.",
+            B: await compress("An unknown internal error occurred."),
           },
           ":debugData": {
             B: await compress((e as Error).message ?? e),

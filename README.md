@@ -150,3 +150,7 @@ Furthermore, some optional libraries need to be installed for flags like `fsanit
 - `devtoolset-10-libasan-devel.x86_64` is needed for `fsanitize=address`
 
 Also see [this SO post](https://stackoverflow.com/questions/61165009/how-to-install-devtoolset-8-gcc-8-on-amazon-linux-2).
+
+### Out of space -- CE
+
+I encountered an issue where all compilations would fail because the `/tmp` directory was out of space. I don't know why this is happening as the lambda should clean up after itself. A temporary workaround is to either redeploy the lambda and restart the containers, or to add logic to delete the `/tmp` folder on AWS machines.
