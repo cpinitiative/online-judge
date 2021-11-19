@@ -55,7 +55,12 @@ describe("C++", () => {
     );
     const data = JSON.parse(result.body);
     const submission = await waitForSubmissionFinish(data.submissionID);
-    jestCheckSubmission(submission);
+    const { submissionID, testCases, ...submissionToCheck } = submission;
+    expect(submissionToCheck).toMatchSnapshot();
+    testCases.forEach(({ time, memory, ...tc }) => {
+      expect(tc.verdict).toBe("RTE");
+      expect(tc.stderr).toMatch(/Assertion \`false' failed\./);
+    });
     expect(submission.verdict).toBe("RTE");
   }, 18000);
 
@@ -81,5 +86,22 @@ JEST_TEST.cpp:17:10: error: ‘NBAD’ was not declared in this scope
       |          ^~~~
 "
 `);
+  }, 18000);
+
+  it("handles very large input files", async () => {
+    const result = await appHandlerPromise(
+      generateProblemSubmissionRequest({
+        language: "cpp",
+        filename: "JEST_TEST.cpp",
+        problemID: "usaco-674",
+        sourceCode: readFileSync(
+          path.join(__dirname, "testFiles/cpp_roboherd_ac.cpp")
+        ).toString(),
+      })
+    );
+    const data = JSON.parse(result.body);
+    const submission = await waitForSubmissionFinish(data.submissionID);
+    jestCheckSubmission(submission);
+    expect(submission.verdict).toBe("AC");
   }, 18000);
 });

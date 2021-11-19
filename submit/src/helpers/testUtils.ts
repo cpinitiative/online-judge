@@ -56,11 +56,11 @@ export const waitForSubmissionFinish = (
 ): Promise<ProblemSubmissionResult> => {
   return new Promise((resolve, reject) => {
     const check = (tries: number) => {
-      // shouldn't take more than 10 seconds
-      if (tries > 10) {
+      // shouldn't take more than 15 seconds
+      if (tries > 15) {
         reject(
           new Error(
-            "Submission " + submissionID + " didn't finish after 10 seconds"
+            "Submission " + submissionID + " didn't finish after 15 seconds"
           )
         );
         return;

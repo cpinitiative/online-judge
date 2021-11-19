@@ -22,6 +22,6 @@ int main(void)
   sort (gaps.rbegin(), gaps.rend());
   for (int i=0; i<K-1 && i<gaps.size(); i++) answer -= gaps[i];
 
-  if (answer % 2 != 0) assert(false);
-  else cout << answer * 12 << "\n";
+  assert(false);
+  cout << answer * 12 << "\n";
 }
