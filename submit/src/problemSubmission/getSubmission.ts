@@ -29,8 +29,11 @@ export default async function getSubmission(
     language: response.language.S!,
     filename: response.filename.S!,
     sourceCode: decompress(response.sourceCode.B!),
-    testCases: response.testCases.L!.map<ProblemSubmissionTestCaseResult>(
-      (tc) => ({
+    testCases: Object.keys(response.testCases.M!)
+      .map((x) => parseInt(x))
+      .sort()
+      .map((idx) => response.testCases.M!["" + idx])
+      .map<ProblemSubmissionTestCaseResult>((tc) => ({
         verdict: tc.M!.verdict.S! as ExecutionVerdict,
         time: tc.M!.time.S!,
         memory: tc.M!.memory.S!,
@@ -38,8 +41,7 @@ export default async function getSubmission(
         expectedOutput: decompress(tc.M!.expectedOutput.B!),
         stdout: decompress(tc.M!.stdout.B!),
         stderr: decompress(tc.M!.stderr.B!),
-      })
-    ),
+      })),
   };
 
   if (response.message) {

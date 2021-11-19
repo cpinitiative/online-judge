@@ -45,7 +45,7 @@ export const lambdaHandler = (
                 S: "compiling",
               },
               testCases: {
-                L: [],
+                M: {},
               },
               problemID: {
                 S: requestData.problemID,

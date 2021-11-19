@@ -164,7 +164,10 @@ export default async function createSubmission(
               S: submissionID,
             },
           },
-          UpdateExpression: `SET testCases[${index}] = :data`,
+          UpdateExpression: `SET testCases.#index = :data`,
+          ExpressionAttributeNames: {
+            "#index": "" + index,
+          },
           ExpressionAttributeValues: {
             ":data": {
               M: {
