@@ -6,7 +6,8 @@
     "outDir": "./dist",
     "rootDir": "./",
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "strict": true
   },
   "include": ["./src/**/*.ts", "./src/**/*.js"],
   "exclude": ["node_modules", "dist"],

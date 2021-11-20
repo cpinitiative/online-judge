@@ -7,16 +7,11 @@ import type {
 import execute from "./helpers/execute";
 import getSubmission from "./problemSubmission/getSubmission";
 import createSubmission from "./problemSubmission/createSubmission";
-import { buildResponse, compress, decompress } from "./helpers/utils";
+import { buildResponse, compress } from "./helpers/utils";
 import compile from "./helpers/compile";
-import { PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { dbClient } from "./clients";
-import {
-  ExecutionVerdict,
-  ProblemSubmissionRequestData,
-  ProblemSubmissionResult,
-  ProblemSubmissionTestCaseResult,
-} from "./types";
+import { z } from "zod";
 
 // todo: make idempotent?
 export const lambdaHandler = (
@@ -31,10 +26,52 @@ export const lambdaHandler = (
   switch (event.httpMethod + " " + event.resource) {
     case "POST /submissions":
       // todo validate structure of body?
-      const submissionID = uuidv4();
+      (async () => {
+        try {
+          let submissionID = uuidv4();
 
-      compress(requestData.sourceCode)
-        .then((compressedSourceCode) => {
+          if (requestData.submissionID) {
+            submissionID = requestData.submissionID;
+            if (!z.string().uuid().safeParse(submissionID).success) {
+              callback(
+                null,
+                buildResponse(
+                  {
+                    message: "Invalid submissionID format. Needs to be uuid.",
+                  },
+                  { statusCode: 400 }
+                )
+              );
+              return;
+            }
+
+            const dbGetParams = {
+              TableName: "online-judge",
+              Key: {
+                submissionID: {
+                  S: submissionID,
+                },
+              },
+            };
+            const getCommand = new GetItemCommand(dbGetParams);
+            const response = (await dbClient.send(getCommand)).Item;
+            if (response) {
+              // Submission already exists
+              callback(
+                null,
+                buildResponse(
+                  {
+                    message:
+                      "A submission with the given submissionID already exists.",
+                  },
+                  { statusCode: 409 }
+                )
+              );
+              return;
+            }
+          }
+
+          const compressedSourceCode = await compress(requestData.sourceCode);
           const dbCommand = new PutItemCommand({
             TableName: "online-judge",
             Item: {
@@ -61,23 +98,37 @@ export const lambdaHandler = (
               },
             },
           });
-          return dbClient.send(dbCommand);
-        })
-        .then(() => {
-          const promise = createSubmission(submissionID, requestData);
+          await dbClient.send(dbCommand);
 
-          callback(
-            null,
-            buildResponse({
-              submissionID,
-            })
-          );
+          const submissionPromise = createSubmission(submissionID, requestData);
 
-          return promise;
-        })
-        .catch((e) => {
+          if (!requestData.wait) {
+            callback(
+              null,
+              buildResponse({
+                submissionID,
+              })
+            );
+          }
+
+          await submissionPromise;
+
+          if (requestData.wait) {
+            await getSubmission(submissionID)
+              .then((response) => {
+                callback(
+                  null,
+                  buildResponse(response, {
+                    statusCode: 200,
+                  })
+                );
+              })
+              .catch((e) => callback(e));
+          }
+        } catch (e: any) {
           callback(e);
-        });
+        }
+      })();
 
       break;
 

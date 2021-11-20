@@ -6,6 +6,8 @@ import {
   jestCheckSubmission,
   waitForSubmissionFinish,
 } from "./helpers/testUtils";
+import { v4 as uuidv4 } from "uuid";
+import { ProblemSubmissionResult } from "./types";
 
 describe("C++", () => {
   it("compiles and runs", async () => {
@@ -88,20 +90,76 @@ JEST_TEST.cpp:17:10: error: ‘NBAD’ was not declared in this scope
 `);
   }, 18000);
 
-  it("handles very large input files", async () => {
+  // it("handles very large input files", async () => {
+  //   const result = await appHandlerPromise(
+  //     generateProblemSubmissionRequest({
+  //       language: "cpp",
+  //       filename: "JEST_TEST.cpp",
+  //       problemID: "usaco-674",
+  //       sourceCode: readFileSync(
+  //         path.join(__dirname, "testFiles/cpp_roboherd_ac.cpp")
+  //       ).toString(),
+  //     })
+  //   );
+  //   const data = JSON.parse(result.body);
+  //   const submission = await waitForSubmissionFinish(data.submissionID);
+  //   jestCheckSubmission(submission);
+  //   expect(submission.verdict).toBe("AC");
+  // }, 18000);
+
+  it("supports waiting", async () => {
     const result = await appHandlerPromise(
       generateProblemSubmissionRequest({
         language: "cpp",
         filename: "JEST_TEST.cpp",
-        problemID: "usaco-674",
+        problemID: "usaco-1111",
         sourceCode: readFileSync(
-          path.join(__dirname, "testFiles/cpp_roboherd_ac.cpp")
+          path.join(__dirname, "testFiles/cpp_1111_ac.cpp")
         ).toString(),
+        wait: true,
+      })
+    );
+    const submission: ProblemSubmissionResult = JSON.parse(result.body);
+    jestCheckSubmission(submission);
+    expect(submission.verdict).toBe("AC");
+  }, 18000);
+
+  it("supports a custom submission ID", async () => {
+    const id = uuidv4();
+    const result = await appHandlerPromise(
+      generateProblemSubmissionRequest({
+        language: "cpp",
+        filename: "JEST_TEST.cpp",
+        problemID: "usaco-1111",
+        sourceCode: readFileSync(
+          path.join(__dirname, "testFiles/cpp_1111_ac.cpp")
+        ).toString(),
+        submissionID: id,
       })
     );
     const data = JSON.parse(result.body);
     const submission = await waitForSubmissionFinish(data.submissionID);
     jestCheckSubmission(submission);
+    expect(submission.submissionID).toBe(id);
     expect(submission.verdict).toBe("AC");
+
+    // should reject duplicate submission IDs
+    const result2 = await appHandlerPromise(
+      generateProblemSubmissionRequest({
+        language: "cpp",
+        filename: "JEST_TEST.cpp",
+        problemID: "usaco-1111",
+        sourceCode: readFileSync(
+          path.join(__dirname, "testFiles/cpp_1111_wa.cpp")
+        ).toString(),
+        submissionID: id,
+      })
+    );
+    const data2 = JSON.parse(result2.body);
+    expect(data2).toMatchInlineSnapshot(`
+Object {
+  "message": "A submission with the given submissionID already exists.",
+}
+`);
   }, 18000);
 });

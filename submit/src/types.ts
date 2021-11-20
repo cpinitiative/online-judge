@@ -21,6 +21,8 @@ export interface ProblemSubmissionRequestData {
   language: "cpp" | "java" | "py";
   filename: string;
   sourceCode: string;
+  submissionID?: string; // if given, uses this as the submission ID. must be uuidv4
+  wait?: boolean; // if true, request will wait until the submission finishes grading.
 }
 
 export interface ProblemSubmissionResult {

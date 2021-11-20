@@ -913,284 +913,831 @@ Object {
 }
 `;
 
-exports[`C++ handles very large input files 1`] = `
+exports[`C++ supports a custom submission ID 1`] = `
 Object {
-  "debugData": "Request must be smaller than 6291456 bytes for the InvokeFunction operation",
   "filename": "JEST_TEST.cpp",
   "language": "cpp",
-  "message": "An unknown internal error occurred.",
-  "problemID": "usaco-674",
-  "sourceCode": "// http://www.usaco.org/index.php?page=viewproblem2&cpid=674
+  "problemID": "usaco-1111",
+  "sourceCode": "// http://usaco.org/index.php?page=viewproblem2&cpid=1111
 // AC
 // Standard I/O
 
 #include <iostream>
+#include <set>
 #include <vector>
 #include <algorithm>
-
 using namespace std;
-
-int N, M;
-vector<int> A[100010];
-int F[100010];
-int totalcount;
-long long savings;
-
-void search(int x, long long budget) {
-  if (totalcount >= M) {
-    return;
+ 
+set<int> blocks;
+vector<int> gaps;
+ 
+int main(void)
+{
+  int N, K, years_ago, answer, last = 0;
+  cin >> N >> K;
+  for (int i=0; i<N; i++) { cin >> years_ago; blocks.insert ((years_ago+11)/12); }
+  answer = *blocks.rbegin();
+  while (!blocks.empty()) {
+    gaps.push_back(*blocks.begin() - last - 1);
+    last = *blocks.begin();
+    blocks.erase(*blocks.begin());
   }
-  if (x != -1 && budget < A[x][0]) {
-    x = upper_bound(F, F + x, (int)budget) - F - 1;
-  }
-  if (x == -1) {
-    totalcount++;
-    return;
-  }
-  search(x - 1, budget);
-  for (int i = 0; i < A[x].size() && A[x][i] <= budget; i++) {
-    search(x - 1, budget - A[x][i]);
-  }
-}
-
-void enumerate(int x, long long budget) {
-  if (x != -1 && budget < A[x][0]) {
-    x = upper_bound(F, F + x, (int)budget) - F - 1;
-  }
-  if (x == -1) {
-    savings += budget + 1;
-    return;
-  }
-  enumerate(x - 1, budget);
-  for (int i = 0; i < A[x].size() && A[x][i] <= budget; i++) {
-    enumerate(x - 1, budget - A[x][i]);
-  }
-}
-
-int main() {
-  cin >> N >> M;
-  
-  long long base = 0;
-  long long mx = 0;
-  for (int i = 0; i < N; i++) {
-    int sz; cin >> sz;
-    
-    vector<int> V(sz);
-    for (int j = 0; j < sz; j++) {
-      cin >> V[j];
-    }
-    sort(V.begin(), V.end());
-    
-    base += V[0];
-    if (sz == 1) {
-      i--;
-      N--;
-      continue;
-    }
-    for (int j = 1; j < sz; j++) {
-      A[i].push_back(V[j] - V[0]);
-    }
-    mx += A[i].back();
-  }
-  
-  sort(A, A + N);
-  for (int i = 0; i < N; i++) {
-    F[i] = A[i][0];
-  }
-  
-  long long lo = 0;
-  long long hi = mx;
-  while (lo < hi) {
-    long long md = (lo + hi) / 2;
-    totalcount = 0;
-    search(N - 1, md);
-    if (totalcount < M) {
-      lo = md + 1;
-    } else {
-      hi = md;
-    }
-  }
-  
-  savings = 0;
-  if (lo > 0) {
-    enumerate(N - 1, lo - 1);
-  }
-  cout << (base + lo) * M - savings << endl;
-  
-  return 0;
+  sort (gaps.rbegin(), gaps.rend());
+  for (int i=0; i<K-1 && i<gaps.size(); i++) answer -= gaps[i];
+  cout << answer * 12 << \\"\\\\n\\";
 }",
   "status": "done",
-  "verdict": "IE",
+  "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 2`] = `
+exports[`C++ supports a custom submission ID 2`] = `
 Object {
-  "expectedOutput": "61
+  "expectedOutput": "36
 ",
-  "input": "3 10
-4 1 5 3 10
-3 2 3 3
-5 1 3 4 6 6
+  "input": "5 3
+101
+85
+100
+46
+95
 ",
   "stderr": "",
-  "stdout": "61
+  "stdout": "36
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 3`] = `
+exports[`C++ supports a custom submission ID 3`] = `
 Object {
-  "expectedOutput": "1078700301695
+  "expectedOutput": "667512
 ",
-  "input": "[Truncated]",
+  "input": "250 25
+930886
+636915
+238335
+760492
+641421
+490027
+636920
+5211
+702567
+465782
+238336
+703135
+979802
+723058
+898167
+478042
+377373
+544919
+898537
+664370
+803526
+241873
+999170
+497281
+420925
+336327
+126505
+621729
+925857
+353895
+100545
+233367
+990364
+313750
+426808
+947178
+393584
+502651
+612399
+95060
+993368
+698586
+297539
+480570
+960378
+66601
+612902
+260756
+209441
+429689
+346619
+465779
+738097
+834481
+120709
+704567
+179497
+254586
+455306
+406219
+805732
+409503
+258270
+959708
+226340
+747796
+142618
+122846
+892921
+192379
+537764
+469841
+636913
+87764
+324914
+346491
+148365
+281936
+452551
+899228
+975407
+276121
+794395
+661237
+573793
+894428
+231011
+639529
+255763
+854538
+436840
+344818
+670688
+67917
+466996
+987743
+497277
+469786
+338082
+939507
+278611
+127828
+887343
+993373
+192374
+473730
+811305
+465777
+648522
+586708
+408282
+412924
+442062
+962600
+419379
+661242
+487131
+684930
+845894
+497282
+548899
+152959
+272813
+187190
+952926
+365084
+952928
+855542
+379107
+418418
+262009
+625210
+467587
+319301
+667372
+401255
+44599
+229904
+939811
+702566
+811127
+639533
+100549
+821396
+645630
+679292
+480573
+739299
+100541
+352298
+420921
+108581
+499336
+371155
+614769
+981776
+5209
+575579
+421993
+867621
+962504
+801961
+31326
+518944
+613202
+936784
+222842
+608872
+849958
+448036
+457753
+383303
+132133
+772890
+517567
+690368
+473788
+66249
+821391
+12497
+294892
+519125
+613996
+209188
+703729
+543921
+803528
+278050
+504794
+858699
+301039
+90428
+144500
+617647
+36159
+522535
+104339
+502215
+60049
+298285
+495343
+903177
+231016
+260289
+717988
+585795
+53144
+658390
+655340
+569
+174232
+956042
+723055
+81
+903190
+214677
+730690
+764524
+349614
+328205
+565100
+602726
+204916
+325578
+528946
+819080
+218593
+418627
+561886
+788355
+720090
+59479
+806355
+356620
+198987
+498338
+487770
+300606
+412923
+473059
+648518
+990783
+228458
+967637
+620483
+770478
+149314
+645729
+702562
+58025
+",
   "stderr": "",
-  "stdout": "1078700301695
+  "stdout": "667512
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 4`] = `
+exports[`C++ supports a custom submission ID 4`] = `
 Object {
-  "expectedOutput": "224122696940974852
+  "expectedOutput": "629064
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "224122696940974852
+  "stdout": "629064
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 5`] = `
+exports[`C++ supports a custom submission ID 5`] = `
 Object {
-  "expectedOutput": "223178220394498182
+  "expectedOutput": "648948
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "223178220394498182
+  "stdout": "648948
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 6`] = `
+exports[`C++ supports a custom submission ID 6`] = `
 Object {
-  "expectedOutput": "224916249725819077
+  "expectedOutput": "653664
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "224916249725819077
+  "stdout": "653664
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 7`] = `
+exports[`C++ supports a custom submission ID 7`] = `
 Object {
-  "expectedOutput": "222974299955255063
+  "expectedOutput": "656700
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "222974299955255063
+  "stdout": "656700
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 8`] = `
+exports[`C++ supports a custom submission ID 8`] = `
 Object {
-  "expectedOutput": "15114331328425
+  "expectedOutput": "675396
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "15114331328425
+  "stdout": "675396
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 9`] = `
+exports[`C++ supports a custom submission ID 9`] = `
 Object {
-  "expectedOutput": "802763709778536
+  "expectedOutput": "695784
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "802763709778536
+  "stdout": "695784
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 10`] = `
+exports[`C++ supports a custom submission ID 10`] = `
 Object {
-  "expectedOutput": "4405585725953880
+  "expectedOutput": "715896
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "4405585725953880
+  "stdout": "715896
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 11`] = `
+exports[`C++ supports a custom submission ID 11`] = `
 Object {
-  "expectedOutput": "13845876697414703
+  "expectedOutput": "736248
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "13845876697414703
+  "stdout": "736248
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 12`] = `
+exports[`C++ supports waiting 1`] = `
 Object {
-  "expectedOutput": "9999900000
+  "filename": "JEST_TEST.cpp",
+  "language": "cpp",
+  "problemID": "usaco-1111",
+  "sourceCode": "// http://usaco.org/index.php?page=viewproblem2&cpid=1111
+// AC
+// Standard I/O
+
+#include <iostream>
+#include <set>
+#include <vector>
+#include <algorithm>
+using namespace std;
+ 
+set<int> blocks;
+vector<int> gaps;
+ 
+int main(void)
+{
+  int N, K, years_ago, answer, last = 0;
+  cin >> N >> K;
+  for (int i=0; i<N; i++) { cin >> years_ago; blocks.insert ((years_ago+11)/12); }
+  answer = *blocks.rbegin();
+  while (!blocks.empty()) {
+    gaps.push_back(*blocks.begin() - last - 1);
+    last = *blocks.begin();
+    blocks.erase(*blocks.begin());
+  }
+  sort (gaps.rbegin(), gaps.rend());
+  for (int i=0; i<K-1 && i<gaps.size(); i++) answer -= gaps[i];
+  cout << answer * 12 << \\"\\\\n\\";
+}",
+  "status": "done",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 2`] = `
+Object {
+  "expectedOutput": "36
 ",
-  "input": "[Truncated]",
+  "input": "5 3
+101
+85
+100
+46
+95
+",
   "stderr": "",
-  "stdout": "9999900000
+  "stdout": "36
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 13`] = `
+exports[`C++ supports waiting 3`] = `
 Object {
-  "expectedOutput": "3217310187512
+  "expectedOutput": "667512
 ",
-  "input": "[Truncated]",
+  "input": "250 25
+930886
+636915
+238335
+760492
+641421
+490027
+636920
+5211
+702567
+465782
+238336
+703135
+979802
+723058
+898167
+478042
+377373
+544919
+898537
+664370
+803526
+241873
+999170
+497281
+420925
+336327
+126505
+621729
+925857
+353895
+100545
+233367
+990364
+313750
+426808
+947178
+393584
+502651
+612399
+95060
+993368
+698586
+297539
+480570
+960378
+66601
+612902
+260756
+209441
+429689
+346619
+465779
+738097
+834481
+120709
+704567
+179497
+254586
+455306
+406219
+805732
+409503
+258270
+959708
+226340
+747796
+142618
+122846
+892921
+192379
+537764
+469841
+636913
+87764
+324914
+346491
+148365
+281936
+452551
+899228
+975407
+276121
+794395
+661237
+573793
+894428
+231011
+639529
+255763
+854538
+436840
+344818
+670688
+67917
+466996
+987743
+497277
+469786
+338082
+939507
+278611
+127828
+887343
+993373
+192374
+473730
+811305
+465777
+648522
+586708
+408282
+412924
+442062
+962600
+419379
+661242
+487131
+684930
+845894
+497282
+548899
+152959
+272813
+187190
+952926
+365084
+952928
+855542
+379107
+418418
+262009
+625210
+467587
+319301
+667372
+401255
+44599
+229904
+939811
+702566
+811127
+639533
+100549
+821396
+645630
+679292
+480573
+739299
+100541
+352298
+420921
+108581
+499336
+371155
+614769
+981776
+5209
+575579
+421993
+867621
+962504
+801961
+31326
+518944
+613202
+936784
+222842
+608872
+849958
+448036
+457753
+383303
+132133
+772890
+517567
+690368
+473788
+66249
+821391
+12497
+294892
+519125
+613996
+209188
+703729
+543921
+803528
+278050
+504794
+858699
+301039
+90428
+144500
+617647
+36159
+522535
+104339
+502215
+60049
+298285
+495343
+903177
+231016
+260289
+717988
+585795
+53144
+658390
+655340
+569
+174232
+956042
+723055
+81
+903190
+214677
+730690
+764524
+349614
+328205
+565100
+602726
+204916
+325578
+528946
+819080
+218593
+418627
+561886
+788355
+720090
+59479
+806355
+356620
+198987
+498338
+487770
+300606
+412923
+473059
+648518
+990783
+228458
+967637
+620483
+770478
+149314
+645729
+702562
+58025
+",
   "stderr": "",
-  "stdout": "3217310187512
+  "stdout": "667512
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 14`] = `
+exports[`C++ supports waiting 4`] = `
 Object {
-  "expectedOutput": "37172099153805387
+  "expectedOutput": "629064
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "37172099153805387
+  "stdout": "629064
 ",
   "verdict": "AC",
 }
 `;
 
-exports[`C++ handles very large input files 15`] = `
+exports[`C++ supports waiting 5`] = `
 Object {
-  "expectedOutput": "48859756812411017
+  "expectedOutput": "648948
 ",
   "input": "[Truncated]",
   "stderr": "",
-  "stdout": "48859756812411017
+  "stdout": "648948
+",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 6`] = `
+Object {
+  "expectedOutput": "653664
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "653664
+",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 7`] = `
+Object {
+  "expectedOutput": "656700
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "656700
+",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 8`] = `
+Object {
+  "expectedOutput": "675396
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "675396
+",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 9`] = `
+Object {
+  "expectedOutput": "695784
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "695784
+",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 10`] = `
+Object {
+  "expectedOutput": "715896
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "715896
+",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ supports waiting 11`] = `
+Object {
+  "expectedOutput": "736248
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "736248
 ",
   "verdict": "AC",
 }
