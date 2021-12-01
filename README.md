@@ -120,7 +120,9 @@ The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.co
 
 - `POST /execute`: Code execution. Ex: USACO Guide IDE.
 - `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups
-- `GET /submissions/{submissionId}` (under development): Get the status of the submission associated with the given submission ID
+- `GET /submissions/{submissionID}` (under development): Get the status of the submission associated with the given submission ID
+
+Until API docs can be properly written, you can refer to `submit/src/types.ts` to get an idea of the payload and the response types.
 
 Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
 
@@ -148,3 +150,7 @@ Furthermore, some optional libraries need to be installed for flags like `fsanit
 - `devtoolset-10-libasan-devel.x86_64` is needed for `fsanitize=address`
 
 Also see [this SO post](https://stackoverflow.com/questions/61165009/how-to-install-devtoolset-8-gcc-8-on-amazon-linux-2).
+
+### Out of space -- CE
+
+I encountered an issue where all compilations would fail because the `/tmp` directory was out of space. I don't know why this is happening as the lambda should clean up after itself. A temporary workaround is to either redeploy the lambda and restart the containers, or to add logic to delete the `/tmp` folder on AWS machines.

@@ -1,263 +1,198 @@
-import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { buildResponse, extractTimingInfo } from "./utils";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  APIGatewayProxyEvent,
+  APIGatewayEventRequestContext,
+  APIGatewayProxyCallback,
+} from "aws-lambda";
+import execute from "./helpers/execute";
+import getSubmission from "./problemSubmission/getSubmission";
+import createSubmission from "./problemSubmission/createSubmission";
+import { buildResponse, compress } from "./helpers/utils";
+import compile from "./helpers/compile";
+import { GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { dbClient } from "./clients";
+import { z } from "zod";
 
-const client = new LambdaClient({
-  region: "us-west-1",
-});
-
-const dynamoDBClient = new DynamoDBClient({
-  region: "us-west-1",
-});
-
-// Temporarily copy pasted from the execute lambda...
-interface ExecuteResult {
-  status: "success";
-  stdout: string | null;
-  stderr: string | null;
-  exitCode: number | null;
-  exitSignal: string | null;
-  processError: string | null;
-}
-
-// Note: for problem submission, some flags to keep in mind: http://usaco.org/index.php?page=instructions
-
-// WIP
-interface CodeExecutionRequestData {
-  language: "cpp" | "java" | "py";
-}
-
-const updateCodeExecutionStatistics = async (
-  requestData: CodeExecutionRequestData
+// todo: make idempotent?
+export const lambdaHandler = (
+  event: APIGatewayProxyEvent,
+  context: APIGatewayEventRequestContext | null, // null for testing
+  callback: APIGatewayProxyCallback
 ) => {
-  // we don't want to update execution statistics when running test code (like Jest)
-  if (process.env.NODE_ENV === "test") return;
-
-  let language: string = requestData.language;
-  if (language !== "cpp" && language !== "java" && language !== "py") {
-    // this shouldn't happen, but just in case someone sends
-    // a malicious language and we fail to catch it earlier
-    language = "unknown";
-  }
-
-  const updateDB = async () => {
-    await dynamoDBClient.send(
-      new UpdateItemCommand({
-        Key: {
-          id: {
-            S: "codeExecutions",
-          },
-        },
-        TableName: "online-judge-statistics",
-        // Note: make sure a map called `byDate` already exists inside the table...
-        UpdateExpression: `ADD totalCount :inc, #languageCount :inc, byDate.#dateCount :inc`,
-        ExpressionAttributeNames: {
-          "#languageCount": `${language}Count`,
-          "#dateCount": new Date().toISOString().split("T")[0], // Ex: 2021-10-31
-        },
-        ExpressionAttributeValues: {
-          ":inc": {
-            N: "1",
-          },
-        },
-      })
-    );
-  };
-
-  try {
-    await updateDB();
-  } catch (e) {
-    if (
-      e instanceof Error &&
-      e?.message ===
-        "The document path provided in the update expression is invalid for update"
-    ) {
-      // For us to do ADD byDate.#dateCount, the byDate map must exist
-      // If it doesn't exist and fails with the above error, create the byDate map and rerun the update
-      await dynamoDBClient.send(
-        new UpdateItemCommand({
-          Key: {
-            id: {
-              S: "codeExecutions",
-            },
-          },
-          TableName: "online-judge-statistics",
-          // Note: make sure a map called `byDate` already exists inside the table...
-          UpdateExpression: `SET byDate = :value`,
-          ConditionExpression: "attribute_not_exists(byDate)",
-          ExpressionAttributeValues: {
-            ":value": {
-              M: {},
-            },
-          },
-        })
-      );
-      await updateDB();
-    }
-  }
-};
-
-export const lambdaHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
   const requestData = JSON.parse(event.body || "{}");
 
-  // todo validate structure of body?
-  if (!requestData.language) {
-    return {
-      statusCode: 400,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        message: "Unknown language.",
-      }),
-    };
+  // todo validate with zod?
+
+  switch (event.httpMethod + " " + event.resource) {
+    case "POST /submissions":
+      // todo validate structure of body?
+      (async () => {
+        try {
+          let submissionID = uuidv4();
+
+          if (requestData.submissionID) {
+            submissionID = requestData.submissionID;
+            if (!z.string().uuid().safeParse(submissionID).success) {
+              callback(
+                null,
+                buildResponse(
+                  {
+                    message: "Invalid submissionID format. Needs to be uuid.",
+                  },
+                  { statusCode: 400 }
+                )
+              );
+              return;
+            }
+
+            const dbGetParams = {
+              TableName: "online-judge",
+              Key: {
+                submissionID: {
+                  S: submissionID,
+                },
+              },
+            };
+            const getCommand = new GetItemCommand(dbGetParams);
+            const response = (await dbClient.send(getCommand)).Item;
+            if (response) {
+              // Submission already exists
+              callback(
+                null,
+                buildResponse(
+                  {
+                    message:
+                      "A submission with the given submissionID already exists.",
+                  },
+                  { statusCode: 409 }
+                )
+              );
+              return;
+            }
+          }
+
+          const compressedSourceCode = await compress(requestData.sourceCode);
+          const dbCommand = new PutItemCommand({
+            TableName: "online-judge",
+            Item: {
+              submissionID: {
+                S: submissionID,
+              },
+              status: {
+                S: "compiling",
+              },
+              testCases: {
+                M: {},
+              },
+              problemID: {
+                S: requestData.problemID,
+              },
+              language: {
+                S: requestData.language,
+              },
+              filename: {
+                S: requestData.filename,
+              },
+              sourceCode: {
+                B: compressedSourceCode,
+              },
+            },
+          });
+          await dbClient.send(dbCommand);
+
+          const submissionPromise = createSubmission(submissionID, requestData);
+
+          if (!requestData.wait) {
+            callback(
+              null,
+              buildResponse({
+                submissionID,
+              })
+            );
+          }
+
+          await submissionPromise;
+
+          if (requestData.wait) {
+            await getSubmission(submissionID)
+              .then((response) => {
+                callback(
+                  null,
+                  buildResponse(response, {
+                    statusCode: 200,
+                  })
+                );
+              })
+              .catch((e) => callback(e));
+          }
+        } catch (e: any) {
+          callback(e);
+        }
+      })();
+
+      break;
+
+    case "POST /execute":
+      // todo validate more stuff?
+      if (!requestData.language) {
+        callback(
+          null,
+          buildResponse(
+            {
+              message: "Unknown language.",
+            },
+            { statusCode: 400 }
+          )
+        );
+      } else {
+        compile(requestData)
+          .then((compiled) => {
+            if (
+              compiled.status === "internal_error" ||
+              compiled.status === "compile_error"
+            ) {
+              return compiled;
+            }
+            return execute(compiled.output, requestData.input, requestData);
+          })
+          .then((result) => {
+            if (result.status === "internal_error") {
+              callback(null, buildResponse(result, { statusCode: 500 }));
+            } else {
+              callback(null, buildResponse(result));
+            }
+          })
+          .catch((error) => callback(error));
+      }
+      break;
+
+    // future improvement: support ?fields=[listOfFields] to reduce network size?
+    // especially since sending input / output / expected output / stderr for every test case is big
+    case "GET /submissions/{submissionID}":
+      getSubmission(event.pathParameters!.submissionID!)
+        .then((response) => {
+          callback(
+            null,
+            buildResponse(response, {
+              statusCode: 200,
+            })
+          );
+        })
+        .catch((e) => callback(e));
+      break;
+
+    default:
+      callback(
+        null,
+        buildResponse(
+          {
+            message:
+              "Invalid request " + event.httpMethod + " " + event.resource,
+          },
+          {
+            statusCode: 400,
+          }
+        )
+      );
   }
-
-  // deliberately async -- don't hold up the rest of the function execution while waiting for dynamodb
-  updateCodeExecutionStatistics(requestData);
-
-  const compileCommand = new InvokeCommand({
-    FunctionName: "online-judge-ExecuteFunction",
-    Payload: Buffer.from(
-      JSON.stringify({
-        type: "compile",
-        language: requestData.language,
-        compilerOptions: requestData.compilerOptions,
-        filename: requestData.filename,
-        sourceCode: requestData.sourceCode,
-      }),
-      "utf-8"
-    ),
-  });
-  const compileResponse = await client.send(compileCommand);
-  const compileData = JSON.parse(
-    Buffer.from(compileResponse.Payload!).toString()
-  );
-
-  if (compileData.status === "compile_error") {
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: Buffer.from(compileResponse.Payload!).toString(),
-    };
-  } else if (compileData.status === "internal_error") {
-    return {
-      statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        status: "internal_error",
-        message: "Compilation failed with an internal error",
-        debugData: compileData,
-      }),
-    };
-  } else if (compileData.status !== "success") {
-    return {
-      statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        status: "internal_error",
-        message: "Compilation failed with an unknown error",
-        debugData: compileData,
-      }),
-    };
-  }
-
-  const executeCommand = new InvokeCommand({
-    FunctionName: "online-judge-ExecuteFunction",
-    Payload: Buffer.from(
-      JSON.stringify({
-        type: "execute",
-        payload: compileData.output,
-        input: requestData.input,
-        timeout: 5000,
-      })
-    ),
-  });
-  const executeResponse = await client.send(executeCommand);
-  const executeData: ExecuteResult = JSON.parse(
-    Buffer.from(executeResponse.Payload!).toString()
-  );
-
-  if (executeData.status !== "success") {
-    return {
-      statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        status: "internal_error",
-        message: "Execution failed for an unknown reason",
-        debugData: executeData,
-      }),
-    };
-  }
-
-  const { stdout, exitCode, exitSignal, processError } = executeData;
-
-  const {
-    restOfString: stderr,
-    time,
-    memory,
-  } = extractTimingInfo(executeData.stderr);
-
-  // 124 is the exit code returned by linux `timeout` command
-  if (exitCode === 124) {
-    return buildResponse({
-      status: "time_limit_exceeded",
-      stdout,
-      stderr,
-      time,
-      memory,
-      exitCode,
-    });
-  }
-
-  // Honestly I don't think this check is necessary.
-  // Sometimes processError would have EPIPE if the program didn't finish reading in all the stdin.
-  // if (exitSignal !== null || processError !== null) {
-  //   return buildResponse(
-  //     {
-  //       status: "internal_error",
-  //       message:
-  //         "Execution may have failed for an unknown reason. Exit signal / process error was expected to be null, but wasn't.",
-  //       debugData: executeData,
-  //     },
-  //     {
-  //       statusCode: 500,
-  //     }
-  //   );
-  // }
-
-  if (exitCode !== 0) {
-    return buildResponse({
-      status: "runtime_error",
-      stdout,
-      stderr,
-      time,
-      memory,
-      exitCode,
-    });
-  }
-
-  return buildResponse({
-    status: "success",
-    stdout,
-    stderr,
-    time,
-    memory,
-  });
 };

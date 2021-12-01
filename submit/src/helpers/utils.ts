@@ -1,4 +1,6 @@
 import { APIGatewayProxyResult } from "aws-lambda";
+import type { Readable } from "stream";
+import { gunzip, gunzipSync, gzip } from "zlib";
 
 export const extractTimingInfo = (
   data: string | null
@@ -57,3 +59,25 @@ export const buildResponse = (
     ...(extraData || {}),
   };
 };
+
+export async function streamToString(stream: Readable): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+  });
+}
+
+export async function compress(data: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    gzip(data, (error, result) => {
+      if (error) reject(error);
+      resolve(result);
+    });
+  });
+}
+
+export function decompress(data: Uint8Array): string {
+  return gunzipSync(data).toString();
+}

@@ -20,6 +20,7 @@ Resources:
     Properties:
       PackageType: Image
       FunctionName: online-judge-ExecuteFunction
+      AutoPublishAlias: live
       Timeout: 8
       # we should probably not hardcode this...
       VpcConfig:
@@ -36,6 +37,7 @@ Resources:
     Properties:
       FunctionName: online-judge-SubmitFunction
       CodeUri: submit/
+      AutoPublishAlias: live
       Handler: dist/src/app.lambdaHandler
       Runtime: nodejs14.x
       Timeout: 10
@@ -60,7 +62,7 @@ Resources:
         GetSubmission:
           Type: Api
           Properties:
-            Path: /submissions/{submissionId}
+            Path: /submissions/{submissionID}
             Method: get
     Metadata:
       BuildMethod: makefile

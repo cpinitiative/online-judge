@@ -1,10 +1,12 @@
-import * as app from "./app";
-import { generateRequest } from "./testUtils";
+import {
+  appHandlerPromise,
+  generateCodeExecutionRequest,
+} from "./helpers/testUtils";
 
 describe("C++", () => {
   it("compiles and runs", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
@@ -22,8 +24,8 @@ describe("C++", () => {
   });
 
   it("throws compilation error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
@@ -47,8 +49,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("throws TLE error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
@@ -71,8 +73,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   }, 8000);
 
   it("throws RTE error (assertion)", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
@@ -90,8 +92,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("throws RTE error (segfault)", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "",
         filename: "main.cpp",
@@ -108,8 +110,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("respects fsanitize flag (negative index)", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "-fsanitize=undefined",
         filename: "main.cpp",
@@ -136,8 +138,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("respects fsanitize flag (array index out of bounds)", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "-fsanitize=undefined",
         filename: "main.cpp",
@@ -164,8 +166,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
   });
 
   it("respects fsanitize=address flag", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "cpp",
         compilerOptions: "-fsanitize=address",
         filename: "main.cpp",
@@ -196,8 +198,8 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
 
 describe("Java", () => {
   it("compiles and runs", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
         filename: "Main.java",
@@ -224,8 +226,8 @@ describe("Java", () => {
   });
 
   it("throws compilation error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
         filename: "main.java",
@@ -257,8 +259,8 @@ Object {
   });
 
   it("throws TLE error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
         filename: "Main.java",
@@ -296,8 +298,8 @@ Command exited with non-zero status 1
   }, 8000);
 
   it("throws RTE error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "java",
         compilerOptions: "",
         filename: "Main.java",
@@ -336,8 +338,8 @@ Command exited with non-zero status 1
 
 describe("Python", () => {
   it("compiles and runs", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "py",
         compilerOptions: "",
         filename: "main.py",
@@ -355,8 +357,8 @@ print(a + b + c)`,
   });
 
   it("throws TLE error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "py",
         compilerOptions: "",
         filename: "main.py",
@@ -383,8 +385,8 @@ print(a + b + c)`,
   }, 8000);
 
   it("throws RTE error", async () => {
-    const result = await app.lambdaHandler(
-      generateRequest({
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
         language: "py",
         compilerOptions: "",
         filename: "main.py",

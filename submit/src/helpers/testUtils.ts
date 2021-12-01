@@ -1,15 +1,92 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { check } from "prettier";
+import * as app from "../app";
+import getSubmission from "../problemSubmission/getSubmission";
+import {
+  ProblemSubmissionRequestData,
+  ProblemSubmissionResult,
+} from "../types";
 
-export const generateRequest = (data: object): APIGatewayProxyEvent => {
+export const appHandlerPromise = (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  return new Promise((resolve, reject) => {
+    app.lambdaHandler(event, null, (error, result) => {
+      if (error) reject(error);
+      else resolve(result!);
+    });
+  });
+};
+
+export const generateCodeExecutionRequest = (
+  data: object
+): APIGatewayProxyEvent => {
   return {
     ...baseAPIGatewayRequest,
+    resource: "/execute",
     body: JSON.stringify(data),
   } as any; // there's some sketchy typescript bug that I think is irrelevant...
 };
 
+export const generateProblemSubmissionRequest = (
+  data: ProblemSubmissionRequestData
+): APIGatewayProxyEvent => {
+  return {
+    ...baseAPIGatewayRequest,
+    resource: "/submissions",
+    body: JSON.stringify(data),
+  } as any; // there's some sketchy typescript bug that I think is irrelevant...
+};
+
+export const generateGetProblemSubmissionRequest = (
+  submissionID: string
+): APIGatewayProxyEvent => {
+  return {
+    ...baseAPIGatewayRequest,
+    httpMethod: "GET",
+    resource: "/submissions/{submissionID}",
+    pathParameters: {
+      submissionID,
+    },
+  } as any; // there's some sketchy typescript bug that I think is irrelevant...
+};
+
+export const waitForSubmissionFinish = (
+  submissionID: string
+): Promise<ProblemSubmissionResult> => {
+  return new Promise((resolve, reject) => {
+    const check = (tries: number) => {
+      // shouldn't take more than 15 seconds
+      if (tries > 15) {
+        reject(
+          new Error(
+            "Submission " + submissionID + " didn't finish after 15 seconds"
+          )
+        );
+        return;
+      }
+      setTimeout(() => {
+        getSubmission(submissionID)
+          .then((val) => {
+            if (val.status === "done") resolve(val);
+            else check(tries + 1);
+          })
+          .catch(reject);
+      }, 1000);
+    };
+    check(0);
+  });
+};
+
+export const jestCheckSubmission = (submission: ProblemSubmissionResult) => {
+  const { submissionID, testCases, ...submissionToCheck } = submission;
+  expect(submissionToCheck).toMatchSnapshot();
+  testCases.forEach(({ time, memory, ...tc }) => expect(tc).toMatchSnapshot());
+};
+
 const baseAPIGatewayRequest = {
-  body: "eyJ0ZXN0IjoiYm9keSJ9",
-  resource: "/{proxy+}",
+  body: "{}",
+  resource: "/path/to/resource",
   path: "/path/to/resource",
   httpMethod: "POST",
   isBase64Encoded: true,
