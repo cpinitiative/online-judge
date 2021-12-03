@@ -134,7 +134,7 @@ export const lambdaHandler = async function (
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
 
     const spawnResult = spawnSync(
-      `/usr/bin/time -v /usr/bin/timeout ${(
+      `ulimit -c 0 && /usr/bin/time -v /usr/bin/timeout ${(
         (event.timeout ?? 5000) / 1000
       ).toFixed(3)}s sh /tmp/program/run.sh`,
       {

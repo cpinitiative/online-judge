@@ -153,4 +153,4 @@ Also see [this SO post](https://stackoverflow.com/questions/61165009/how-to-inst
 
 ### Out of space -- CE
 
-I encountered an issue where all compilations would fail because the `/tmp` directory was out of space. I don't know why this is happening as the lambda should clean up after itself. A temporary workaround is to either redeploy the lambda and restart the containers, or to add logic to delete the `/tmp` folder on AWS machines.
+I encountered an issue where all compilations would fail because the `/tmp` directory was out of space. This turned out to be because AWS Lambda would generate core dump files anytime there is a runtime error. Solved with `ulimit -c 0`.
