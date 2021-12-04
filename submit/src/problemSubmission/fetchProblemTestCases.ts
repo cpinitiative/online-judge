@@ -44,7 +44,7 @@ export default async function fetchProblemTestCases(problemID: string) {
         Key: file.Key,
       };
       const fileCommand = new GetObjectCommand(fileParams);
-      const response = await s3Client.send(fileCommand);
+      const response = (await s3Client.send(fileCommand)) as any;
       const content = await streamToString(response.Body);
 
       const regexMatch = file.Key!.match(/\/(\d+)\.(in|out)/);

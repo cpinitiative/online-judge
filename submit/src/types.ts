@@ -23,6 +23,10 @@ export interface ProblemSubmissionRequestData {
   sourceCode: string;
   submissionID?: string; // if given, uses this as the submission ID. must be uuidv4
   wait?: boolean; // if true, request will wait until the submission finishes grading.
+  firebase?: {
+    idToken: string; // used to authenticate REST api
+    collectionPath: string;
+  };
 }
 
 export interface ProblemSubmissionResult {

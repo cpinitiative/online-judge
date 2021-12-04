@@ -5,13 +5,14 @@
     "@aws-sdk/client-dynamodb": "^3.40.0",
     "@aws-sdk/client-lambda": "^3.34.0",
     "@aws-sdk/client-s3": "^3.40.0",
+    "node-fetch": "^2.6.6",
     "source-map-support": "^0.5.20",
     "uuid": "^8.3.2",
     "zod": "^3.11.6"
   },
   "scripts": {
-    "build": "node_modules/typescript/bin/tsc -p tsconfig.build.json",
-    "watch": "node_modules/typescript/bin/tsc -w --preserveWatchOutput",
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "tsc -w --preserveWatchOutput",
     "test": "jest"
   },
   "devDependencies": {
@@ -19,6 +20,7 @@
     "@types/aws-lambda": "^8.10.83",
     "@types/jest": "^27.0.2",
     "@types/node": "^16.10.1",
+    "@types/node-fetch": "^2.5.12",
     "@types/readable-stream": "^2.3.11",
     "@types/uuid": "^8.3.1",
     "jest": "^27.2.2",

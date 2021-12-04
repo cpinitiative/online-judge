@@ -38,8 +38,13 @@ process.env.NODE_ENV = "test";
       language: "cpp",
       filename: "main.cpp",
       sourceCode:
-        "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}",
+        "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<36 << endl;}",
       problemID: "usaco-1111",
+      firebase: {
+        collectionPath: `usaco-guide/databases/(default)/documents/__test`,
+        // Fetch this with firebaseUser.getIdToken(true).then(token => console.log(token)); in usaco.guide
+        idToken: `secret`,
+      },
     }),
     null,
     (error, result) => {

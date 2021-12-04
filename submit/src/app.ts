@@ -12,6 +12,8 @@ import compile from "./helpers/compile";
 import { GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { dbClient } from "./clients";
 import { z } from "zod";
+import { ProblemSubmissionRequestData } from "./types";
+import fetch from "node-fetch";
 
 // todo: make idempotent?
 export const lambdaHandler = (
@@ -19,12 +21,14 @@ export const lambdaHandler = (
   context: APIGatewayEventRequestContext | null, // null for testing
   callback: APIGatewayProxyCallback
 ) => {
-  const requestData = JSON.parse(event.body || "{}");
+  const rawRequestData = JSON.parse(event.body || "{}");
 
   // todo validate with zod?
 
   switch (event.httpMethod + " " + event.resource) {
     case "POST /submissions":
+      const requestData: ProblemSubmissionRequestData = rawRequestData;
+
       // todo validate structure of body?
       (async () => {
         try {
@@ -113,17 +117,66 @@ export const lambdaHandler = (
 
           await submissionPromise;
 
-          if (requestData.wait) {
-            await getSubmission(submissionID)
-              .then((response) => {
-                callback(
-                  null,
-                  buildResponse(response, {
-                    statusCode: 200,
-                  })
-                );
-              })
-              .catch((e) => callback(e));
+          if (requestData.wait || requestData.firebase) {
+            let response = undefined;
+
+            try {
+              response = await getSubmission(submissionID);
+            } catch (e: any) {
+              if (requestData.wait) {
+                callback(e);
+              }
+            }
+
+            if (response !== undefined && requestData.wait) {
+              callback(
+                null,
+                buildResponse(response, {
+                  statusCode: 200,
+                })
+              );
+            }
+
+            if (response && requestData.firebase) {
+              const url = `https://firestore.googleapis.com/v1/projects/${requestData.firebase.collectionPath}`;
+              const resp = await fetch(url, {
+                method: "POST",
+                body: JSON.stringify({
+                  fields: {
+                    type: {
+                      stringValue: "Online Judge",
+                    },
+                    verdict: {
+                      stringValue: response.verdict,
+                    },
+                    submissionID: {
+                      stringValue: response.submissionID,
+                    },
+                    problemID: {
+                      stringValue: response.problemID,
+                    },
+                    language: {
+                      stringValue: response.language,
+                    },
+                    score: {
+                      doubleValue:
+                        response.testCases?.length > 0
+                          ? response.testCases.filter((x) => x.verdict === "AC")
+                              .length / response.testCases.length
+                          : 0, // probably a compiler error
+                    },
+                  },
+                }),
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${requestData.firebase.idToken}`,
+                },
+              });
+              if (resp.status !== 200) {
+                console.warn("Failed to update firebase");
+                console.warn(resp);
+              }
+            }
           }
         } catch (e: any) {
           callback(e);
@@ -134,7 +187,7 @@ export const lambdaHandler = (
 
     case "POST /execute":
       // todo validate more stuff?
-      if (!requestData.language) {
+      if (!rawRequestData.language) {
         callback(
           null,
           buildResponse(
@@ -145,7 +198,7 @@ export const lambdaHandler = (
           )
         );
       } else {
-        compile(requestData)
+        compile(rawRequestData)
           .then((compiled) => {
             if (
               compiled.status === "internal_error" ||
@@ -153,7 +206,11 @@ export const lambdaHandler = (
             ) {
               return compiled;
             }
-            return execute(compiled.output, requestData.input, requestData);
+            return execute(
+              compiled.output,
+              rawRequestData.input,
+              rawRequestData
+            );
           })
           .then((result) => {
             if (result.status === "internal_error") {
