@@ -21,6 +21,12 @@ export const lambdaHandler = (
   context: APIGatewayEventRequestContext | null, // null for testing
   callback: APIGatewayProxyCallback
 ) => {
+  if (context) {
+    // Return response immediately without waiting for lambda function to exit
+    // We have to check if it's null because it is null when testing
+    // @ts-ignore this property should exist...
+    context.callbackWaitsForEmptyEventLoop = false;
+  }
   const rawRequestData = JSON.parse(event.body || "{}");
 
   // todo validate with zod?
