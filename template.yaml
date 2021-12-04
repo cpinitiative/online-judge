@@ -48,6 +48,9 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName:
               !Ref StatisticsDynamoDBTable
+        - DynamoDBCrudPolicy:
+            TableName:
+              !Ref DynamoDBTable
       Events:
         Execute:
           Type: Api
@@ -79,6 +82,18 @@ Resources:
         - AttributeName: id
           KeyType: HASH
 
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      TableName: online-judge
+      AttributeDefinitions: 
+        - AttributeName: submissionID
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema: 
+        - AttributeName: submissionID
+          KeyType: HASH
+
 
 Outputs:
   ExecuteFunction:
@@ -90,3 +105,6 @@ Outputs:
   StatisticsDynamoDBTable:
     Description: "Statistics Dyanmo DB Table ARN"
     Value: !GetAtt StatisticsDynamoDBTable.Arn
+  DynamoDBTable:
+    Description: "Main Dyanmo DB Table ARN"
+    Value: !GetAtt DynamoDBTable.Arn

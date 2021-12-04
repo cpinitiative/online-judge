@@ -48,6 +48,8 @@ Note that since Java compilation often results in multiple output files, this la
 
 We use the [AWS Serverless Application Model (SAM)](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-getting-started.html).
 
+- If you get "Build Failed .... Path resolution for runtime: provided of binary: make was not successful", make sure `make` is installed.
+
 ### Building the image
 
 ```
