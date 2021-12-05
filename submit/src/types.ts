@@ -33,7 +33,7 @@ export interface ProblemSubmissionResult {
   submissionID: string;
   status: "compiling" | "executing" | "done";
   verdict?: ExecutionVerdict;
-  testCases: ProblemSubmissionTestCaseResult[];
+  testCases: (ProblemSubmissionTestCaseResult | null)[];
 
   problemID: string;
   language: string;

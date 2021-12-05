@@ -33,15 +33,19 @@ export default async function getSubmission(
       .map((x) => parseInt(x))
       .sort()
       .map((idx) => response.testCases.M!["" + idx])
-      .map<ProblemSubmissionTestCaseResult>((tc) => ({
-        verdict: tc.M!.verdict.S! as ExecutionVerdict,
-        time: tc.M!.time.S!,
-        memory: tc.M!.memory.S!,
-        input: decompress(tc.M!.input.B!),
-        expectedOutput: decompress(tc.M!.expectedOutput.B!),
-        stdout: decompress(tc.M!.stdout.B!),
-        stderr: decompress(tc.M!.stderr.B!),
-      })),
+      .map<ProblemSubmissionTestCaseResult | null>((tc) =>
+        tc.NULL
+          ? null
+          : {
+              verdict: tc.M!.verdict.S! as ExecutionVerdict,
+              time: tc.M!.time.S!,
+              memory: tc.M!.memory.S!,
+              input: decompress(tc.M!.input.B!),
+              expectedOutput: decompress(tc.M!.expectedOutput.B!),
+              stdout: decompress(tc.M!.stdout.B!),
+              stderr: decompress(tc.M!.stderr.B!),
+            }
+      ),
   };
 
   if (response.message) {

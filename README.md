@@ -156,3 +156,38 @@ Also see [this SO post](https://stackoverflow.com/questions/61165009/how-to-inst
 ### Out of space -- CE
 
 I encountered an issue where all compilations would fail because the `/tmp` directory was out of space. This turned out to be because AWS Lambda would generate core dump files anytime there is a runtime error. Solved with `ulimit -c 0`.
+
+### InvalidSignatureException
+
+I got this once:
+
+```
+2021-12-05T00:32:08.371Z	89cac995-f38c-43d1-bfb5-16a76aa83f70	ERROR	InvalidSignatureException: Signature expired: 20211205T002507Z is now earlier than 20211205T002708Z (20211205T003208Z - 5 min.)
+    at deserializeAws_restJson1InvokeCommandError (/var/task/node_modules/@aws-sdk/client-lambda/dist-cjs/protocols/Aws_restJson1.js:5156:41)
+    at runMicrotasks (<anonymous>)
+    at processTicksAndRejections (internal/process/task_queues.js:95:5)
+    at async /var/task/node_modules/@aws-sdk/middleware-serde/dist-cjs/deserializerMiddleware.js:6:20
+    at async /var/task/node_modules/@aws-sdk/middleware-signing/dist-cjs/middleware.js:11:20
+    at async StandardRetryStrategy.retry (/var/task/node_modules/@aws-sdk/middleware-retry/dist-cjs/StandardRetryStrategy.js:51:46)
+    at async /var/task/node_modules/@aws-sdk/middleware-logger/dist-cjs/loggerMiddleware.js:6:22
+    at async compile (/var/task/dist/src/helpers/compile.js:16:29)
+    at async Promise.all (index 1)
+    at async createSubmission (/var/task/dist/src/problemSubmission/createSubmission.js:24:47) {
+  '$fault': 'client',
+  '$metadata': {
+    httpStatusCode: 403,
+    requestId: '6642a280-9ae4-4de9-98f7-049727ebddca',
+    extendedRequestId: undefined,
+    cfId: undefined,
+    attempts: 3,
+    totalRetryDelay: 285
+  }
+}
+```
+
+May be able to be temporarily resolved by forcing lambdas to restart:
+
+```
+aws lambda update-function-configuration --function-name "online-judge-SubmitFunction" --description "upd"
+aws lambda update-function-configuration --function-name "online-judge-ExecuteFunction" --description "upd"
+```

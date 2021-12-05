@@ -167,8 +167,9 @@ export const lambdaHandler = (
                     score: {
                       doubleValue:
                         response.testCases?.length > 0
-                          ? response.testCases.filter((x) => x.verdict === "AC")
-                              .length / response.testCases.length
+                          ? response.testCases.filter(
+                              (x) => x?.verdict === "AC"
+                            ).length / response.testCases.length
                           : 0, // probably a compiler error
                     },
                   },

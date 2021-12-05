@@ -59,9 +59,13 @@ describe("C++", () => {
     const submission = await waitForSubmissionFinish(data.submissionID);
     const { submissionID, testCases, ...submissionToCheck } = submission;
     expect(submissionToCheck).toMatchSnapshot();
-    testCases.forEach(({ time, memory, ...tc }) => {
-      expect(tc.verdict).toBe("RTE");
-      expect(tc.stderr).toMatch(/Assertion \`false' failed\./);
+    testCases.forEach((x) => {
+      expect(x).not.toBeNull();
+      if (x) {
+        const { time, memory, ...tc } = x;
+        expect(tc.verdict).toBe("RTE");
+        expect(tc.stderr).toMatch(/Assertion \`false' failed\./);
+      }
     });
     expect(submission.verdict).toBe("RTE");
   }, 18000);

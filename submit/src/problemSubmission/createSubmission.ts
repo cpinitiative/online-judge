@@ -103,13 +103,26 @@ export default async function createSubmission(
             S: submissionID,
           },
         },
-        UpdateExpression: `SET #status = :status`,
+        UpdateExpression: `SET #status = :status, testCases = :testCases`,
         ExpressionAttributeNames: {
           "#status": "status",
         },
         ExpressionAttributeValues: {
           ":status": {
             S: "executing",
+          },
+          ":testCases": {
+            M: testCases
+              .map((_, i) => i)
+              .reduce(
+                (acc, cur) => ({
+                  ...acc,
+                  ["" + cur]: {
+                    NULL: true,
+                  },
+                }),
+                {}
+              ),
           },
         },
       })

@@ -81,7 +81,13 @@ export const waitForSubmissionFinish = (
 export const jestCheckSubmission = (submission: ProblemSubmissionResult) => {
   const { submissionID, testCases, ...submissionToCheck } = submission;
   expect(submissionToCheck).toMatchSnapshot();
-  testCases.forEach(({ time, memory, ...tc }) => expect(tc).toMatchSnapshot());
+  testCases.forEach((rawTC) => {
+    expect(rawTC).not.toBeNull();
+    if (rawTC) {
+      const { time, memory, ...tc } = rawTC;
+      expect(tc).toMatchSnapshot();
+    }
+  });
 };
 
 const baseAPIGatewayRequest = {
