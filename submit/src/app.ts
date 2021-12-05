@@ -38,7 +38,7 @@ export const lambdaHandler = (
       // todo validate structure of body?
       (async () => {
         try {
-          let submissionID = uuidv4();
+          let submissionID = context?.requestId || uuidv4();
 
           if (requestData.submissionID) {
             submissionID = requestData.submissionID;
@@ -144,6 +144,7 @@ export const lambdaHandler = (
             }
 
             if (response && requestData.firebase) {
+              console.log("Updating Firebase");
               const url = `https://firestore.googleapis.com/v1/projects/${requestData.firebase.collectionPath}`;
               const resp = await fetch(url, {
                 method: "POST",
@@ -179,6 +180,7 @@ export const lambdaHandler = (
                   Authorization: `Bearer ${requestData.firebase.idToken}`,
                 },
               });
+              console.log(resp);
               if (resp.status !== 200) {
                 console.warn("Failed to update firebase");
                 console.warn(resp);
