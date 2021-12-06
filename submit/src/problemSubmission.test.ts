@@ -57,7 +57,8 @@ describe("C++", () => {
     );
     const data = JSON.parse(result.body);
     const submission = await waitForSubmissionFinish(data.submissionID);
-    const { submissionID, testCases, ...submissionToCheck } = submission;
+    const { submissionID, testCases, timestamp, ...submissionToCheck } =
+      submission;
     expect(submissionToCheck).toMatchSnapshot();
     testCases.forEach((x) => {
       expect(x).not.toBeNull();

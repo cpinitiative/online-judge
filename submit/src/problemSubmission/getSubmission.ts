@@ -23,6 +23,7 @@ export default async function getSubmission(
   const response = (await dbClient.send(getCommand)).Item!;
 
   const data: ProblemSubmissionResult = {
+    timestamp: parseInt(response.timestamp.S!),
     submissionID: response.submissionID.S!,
     status: response.status.S! as "compiling" | "executing" | "done",
     problemID: response.problemID.S!,

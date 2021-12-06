@@ -79,7 +79,8 @@ export const waitForSubmissionFinish = (
 };
 
 export const jestCheckSubmission = (submission: ProblemSubmissionResult) => {
-  const { submissionID, testCases, ...submissionToCheck } = submission;
+  const { submissionID, testCases, timestamp, ...submissionToCheck } =
+    submission;
   expect(submissionToCheck).toMatchSnapshot();
   testCases.forEach((rawTC) => {
     expect(rawTC).not.toBeNull();

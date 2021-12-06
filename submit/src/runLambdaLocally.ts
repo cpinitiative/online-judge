@@ -40,11 +40,15 @@ process.env.NODE_ENV = "test";
       sourceCode:
         "#include <bits/stdc++.h>\nusing namespace std;\nint main(){int a, b, c; cin >> a >> b >> c; cout <<36 << endl;}",
       problemID: "usaco-1111",
-      firebase: {
-        collectionPath: `usaco-guide/databases/(default)/documents/__test`,
-        // Fetch this with firebaseUser.getIdToken(true).then(token => console.log(token)); in usaco.guide
-        idToken: `secret`,
-      },
+      // submissionID: "840a84a8-7033-4128-962b-a454a29b941f",
+      // wait: true,
+      // __INTERNAL_SUBMISSION_ALREADY_CREATED: true,
+      // firebase: {
+      //   collectionPath: `usaco-guide/databases/(default)/documents/__test`,
+      //   // Fetch this with firebaseUser.getIdToken(true).then(token => console.log(token)); in usaco.guide
+      //   idToken: `secret`,
+      //   userID: "---",
+      // },
     }),
     null,
     (error, result) => {

@@ -24,13 +24,21 @@ export interface ProblemSubmissionRequestData {
   submissionID?: string; // if given, uses this as the submission ID. must be uuidv4
   wait?: boolean; // if true, request will wait until the submission finishes grading.
   firebase?: {
+    userID: string;
     idToken: string; // used to authenticate REST api
     collectionPath: string;
   };
+  // An internal-only flag signalling that the given submission ID
+  // has already been created, and that it should be used for this submission.
+  // This is used to handle submission requests without a submission ID:
+  // The first lambda creates the submission, calls the submission lambda again
+  // with this flag set to true, and then immediately returns the submission ID.
+  __INTERNAL_SUBMISSION_ALREADY_CREATED?: boolean;
 }
 
 export interface ProblemSubmissionResult {
   submissionID: string;
+  timestamp: number; // milliseconds since epoch
   status: "compiling" | "executing" | "done";
   verdict?: ExecutionVerdict;
   testCases: (ProblemSubmissionTestCaseResult | null)[];

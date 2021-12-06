@@ -10,10 +10,11 @@ import createSubmission from "./problemSubmission/createSubmission";
 import { buildResponse, compress } from "./helpers/utils";
 import compile from "./helpers/compile";
 import { GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { dbClient } from "./clients";
+import { dbClient, lambdaClient } from "./clients";
 import { z } from "zod";
 import { ProblemSubmissionRequestData } from "./types";
 import fetch from "node-fetch";
+import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 // todo: make idempotent?
 export const lambdaHandler = (
@@ -21,12 +22,6 @@ export const lambdaHandler = (
   context: APIGatewayEventRequestContext | null, // null for testing
   callback: APIGatewayProxyCallback
 ) => {
-  if (context) {
-    // Return response immediately without waiting for lambda function to exit
-    // We have to check if it's null because it is null when testing
-    // @ts-ignore this property should exist...
-    context.callbackWaitsForEmptyEventLoop = false;
-  }
   const rawRequestData = JSON.parse(event.body || "{}");
 
   // todo validate with zod?
@@ -39,6 +34,23 @@ export const lambdaHandler = (
       (async () => {
         try {
           let submissionID = context?.requestId || uuidv4();
+
+          if (
+            requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED &&
+            (!requestData.wait || !requestData.submissionID)
+          ) {
+            callback(
+              null,
+              buildResponse(
+                {
+                  message:
+                    "If __INTERNAL_SUBMISSION_ALREADY_CREATED is set, then both `wait` and `submissionID` must be set to true.",
+                },
+                { statusCode: 400 }
+              )
+            );
+            return;
+          }
 
           if (requestData.submissionID) {
             submissionID = requestData.submissionID;
@@ -55,75 +67,98 @@ export const lambdaHandler = (
               return;
             }
 
-            const dbGetParams = {
-              TableName: "online-judge",
-              Key: {
-                submissionID: {
-                  S: submissionID,
-                },
-              },
-            };
-            const getCommand = new GetItemCommand(dbGetParams);
-            const response = (await dbClient.send(getCommand)).Item;
-            if (response) {
-              // Submission already exists
-              callback(
-                null,
-                buildResponse(
-                  {
-                    message:
-                      "A submission with the given submissionID already exists.",
+            if (!requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED) {
+              const dbGetParams = {
+                TableName: "online-judge",
+                Key: {
+                  submissionID: {
+                    S: submissionID,
                   },
-                  { statusCode: 409 }
-                )
-              );
-              return;
+                },
+              };
+              const getCommand = new GetItemCommand(dbGetParams);
+              const response = (await dbClient.send(getCommand)).Item;
+              if (response) {
+                // Submission already exists
+                callback(
+                  null,
+                  buildResponse(
+                    {
+                      message:
+                        "A submission with the given submissionID already exists.",
+                    },
+                    { statusCode: 409 }
+                  )
+                );
+                return;
+              }
             }
           }
 
-          const compressedSourceCode = await compress(requestData.sourceCode);
-          const dbCommand = new PutItemCommand({
-            TableName: "online-judge",
-            Item: {
-              submissionID: {
-                S: submissionID,
+          if (!requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED) {
+            const compressedSourceCode = await compress(requestData.sourceCode);
+            const dbCommand = new PutItemCommand({
+              TableName: "online-judge",
+              Item: {
+                timestamp: {
+                  S: "" + new Date().getTime(),
+                },
+                submissionID: {
+                  S: submissionID,
+                },
+                status: {
+                  S: "compiling",
+                },
+                testCases: {
+                  M: {},
+                },
+                problemID: {
+                  S: requestData.problemID,
+                },
+                language: {
+                  S: requestData.language,
+                },
+                filename: {
+                  S: requestData.filename,
+                },
+                sourceCode: {
+                  B: compressedSourceCode,
+                },
               },
-              status: {
-                S: "compiling",
-              },
-              testCases: {
-                M: {},
-              },
-              problemID: {
-                S: requestData.problemID,
-              },
-              language: {
-                S: requestData.language,
-              },
-              filename: {
-                S: requestData.filename,
-              },
-              sourceCode: {
-                B: compressedSourceCode,
-              },
-            },
-          });
-          await dbClient.send(dbCommand);
-
-          const submissionPromise = createSubmission(submissionID, requestData);
+            });
+            await dbClient.send(dbCommand);
+          }
 
           if (!requestData.wait) {
+            const payload: ProblemSubmissionRequestData = {
+              ...requestData,
+              submissionID,
+              wait: true,
+              __INTERNAL_SUBMISSION_ALREADY_CREATED: true,
+            };
+
+            // Don't wait for lambda to finish
+            // Note: need to use fetch to get the right event format
+            fetch(
+              `https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+              }
+            );
+
             callback(
               null,
               buildResponse({
                 submissionID,
               })
             );
-          }
+          } else {
+            await createSubmission(submissionID, requestData);
 
-          await submissionPromise;
-
-          if (requestData.wait || requestData.firebase) {
             let response = undefined;
 
             try {
@@ -132,15 +167,6 @@ export const lambdaHandler = (
               if (requestData.wait) {
                 callback(e);
               }
-            }
-
-            if (response !== undefined && requestData.wait) {
-              callback(
-                null,
-                buildResponse(response, {
-                  statusCode: 200,
-                })
-              );
             }
 
             if (response && requestData.firebase) {
@@ -152,6 +178,12 @@ export const lambdaHandler = (
                   fields: {
                     type: {
                       stringValue: "Online Judge",
+                    },
+                    userID: {
+                      stringValue: requestData.firebase.userID,
+                    },
+                    timestamp: {
+                      integerValue: new Date().getTime(),
                     },
                     verdict: {
                       stringValue: response.verdict,
@@ -186,8 +218,19 @@ export const lambdaHandler = (
                 console.warn(resp);
               }
             }
+
+            if (response !== undefined) {
+              callback(
+                null,
+                buildResponse(response, {
+                  statusCode: 200,
+                })
+              );
+            }
           }
         } catch (e: any) {
+          console.log("ENCOUNTERED UNEXPECTED ERROR");
+          console.error(e);
           callback(e);
         }
       })();
