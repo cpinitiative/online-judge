@@ -71,3 +71,14 @@ export type ExecutionVerdict =
   | "TLE"
   | "CE"
   | "IE"; // IE is internal error
+
+export interface FirebaseSubmission {
+  language: string;
+  problemID: string;
+  score: number;
+  submissionID: string;
+  userID: string;
+  type: string;
+  verdict: string;
+  timestamp: any; // milliseconds
+}
