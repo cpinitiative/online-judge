@@ -6,7 +6,6 @@ export interface CodeExecutionRequestData {
   input: string;
 }
 
-// Temporarily copy pasted from the execute lambda...
 export interface CodeExecutionResult {
   status: "success";
   stdout: string | null;
@@ -14,6 +13,10 @@ export interface CodeExecutionResult {
   exitCode: number | null;
   exitSignal: string | null;
   processError: string | null;
+  // output of compile.
+  // note: if error, this won't be set and stderr will be set instead.
+  // future todo, fix this behavior?
+  compilationMessage: string | null;
 }
 
 export interface ProblemSubmissionRequestData {
