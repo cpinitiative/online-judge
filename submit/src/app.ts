@@ -277,7 +277,7 @@ export const lambdaHandler = (
             if (execute_result.status === "internal_error") {
               callback(null, buildResponse(execute_result, { statusCode: 500 }));
             } else {
-              callback(null, buildResponse(execute_result, { message }));
+              callback(null, buildResponse({...execute_result, message}));
             }
           })
           .catch((error) => callback(error));
