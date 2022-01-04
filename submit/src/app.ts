@@ -264,17 +264,20 @@ export const lambdaHandler = (
             ) {
               return compiled;
             }
-            return execute(
-              compiled.output,
-              rawRequestData.input,
-              rawRequestData
-            );
+            return {
+              message: compiled.message,
+              execute_result: execute(
+                compiled.output,
+                rawRequestData.input,
+                rawRequestData
+              )
+            };
           })
-          .then((result) => {
-            if (result.status === "internal_error") {
-              callback(null, buildResponse(result, { statusCode: 500 }));
+          .then(({ message, execute_result }) => {
+            if (execute_result.status === "internal_error") {
+              callback(null, buildResponse(execute_result, { statusCode: 500 }));
             } else {
-              callback(null, buildResponse(result));
+              callback(null, buildResponse(execute_result, { message }));
             }
           })
           .catch((error) => callback(error));

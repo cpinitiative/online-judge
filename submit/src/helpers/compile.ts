@@ -46,6 +46,7 @@ export default async function compile(data: CompileData) {
 
   return {
     status: "success",
+    message: compileData.message,
     output: compileData.output,
   };
 }
