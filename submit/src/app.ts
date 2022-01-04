@@ -14,7 +14,6 @@ import { dbClient, lambdaClient } from "./clients";
 import { z } from "zod";
 import { ProblemSubmissionRequestData } from "./types";
 import fetch from "node-fetch";
-import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 // todo: make idempotent?
 export const lambdaHandler = (
@@ -264,20 +263,20 @@ export const lambdaHandler = (
             ) {
               return compiled;
             }
-            return {
-              message: compiled.message,
-              execute_result: execute(
-                compiled.output,
-                rawRequestData.input,
-                rawRequestData
-              )
-            };
+            return execute(
+              compiled.output,
+              rawRequestData.input,
+              rawRequestData
+            ).then((execute_result) => ({
+              compilationMessage: compiled.compilationMessage,
+              ...execute_result,
+            }));
           })
-          .then(({ message, execute_result }) => {
-            if (execute_result.status === "internal_error") {
-              callback(null, buildResponse(execute_result, { statusCode: 500 }));
+          .then((result) => {
+            if (result.status === "internal_error") {
+              callback(null, buildResponse(result, { statusCode: 500 }));
             } else {
-              callback(null, buildResponse({...execute_result, message}));
+              callback(null, buildResponse(result));
             }
           })
           .catch((error) => callback(error));

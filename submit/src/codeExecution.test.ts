@@ -36,16 +36,16 @@ describe("C++", () => {
     );
     const data = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
-Object {
-  "message": "main.cpp: In function ‘int main()’:
-main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c’?
-    3 | int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
-      |                                          ^~
-      |                                          c
-",
-  "status": "compile_error",
-}
-`);
+      Object {
+        "message": "main.cpp: In function ‘int main()’:
+      main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c’?
+          3 | int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
+            |                                          ^~
+            |                                          c
+      ",
+        "status": "compile_error",
+      }
+    `);
   });
 
   it("throws TLE error", async () => {
@@ -62,6 +62,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
     const { memory, ...data } = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
       Object {
+        "compilationMessage": "",
         "exitCode": 124,
         "status": "time_limit_exceeded",
         "stderr": "Command exited with non-zero status 124
@@ -130,6 +131,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
     expect(stderr).toMatch(/Segmentation fault/);
     expect(data).toMatchInlineSnapshot(`
       Object {
+        "compilationMessage": "",
         "exitCode": 139,
         "status": "runtime_error",
         "stdout": "",
@@ -160,6 +162,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
     );
     expect(data).toMatchInlineSnapshot(`
       Object {
+        "compilationMessage": "",
         "status": "success",
       }
     `);
@@ -188,6 +191,7 @@ main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c
     );
     expect(data).toMatchInlineSnapshot(`
       Object {
+        "compilationMessage": "",
         "exitCode": 1,
         "status": "runtime_error",
         "stdout": "",
@@ -247,15 +251,15 @@ describe("Java", () => {
     );
     const data = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
-Object {
-  "message": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
-          public class NotMain {
-                 ^
-1 error
-",
-  "status": "compile_error",
-}
-`);
+      Object {
+        "message": "main.java:3: error: class NotMain is public, should be declared in a file named NotMain.java
+                public class NotMain {
+                       ^
+      1 error
+      ",
+        "status": "compile_error",
+      }
+    `);
   });
 
   it("throws TLE error", async () => {
@@ -281,20 +285,21 @@ Object {
     );
     const { memory, time, ...data } = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
-Object {
-  "exitCode": 1,
-  "status": "runtime_error",
-  "stderr": "Exception in thread \\"main\\" java.util.NoSuchElementException
-	at java.base/java.util.Scanner.throwFor(Scanner.java:937)
-	at java.base/java.util.Scanner.next(Scanner.java:1594)
-	at java.base/java.util.Scanner.nextInt(Scanner.java:2258)
-	at java.base/java.util.Scanner.nextInt(Scanner.java:2212)
-	at Main.main(Main.java:6)
-Command exited with non-zero status 1
-",
-  "stdout": "",
-}
-`);
+      Object {
+        "compilationMessage": "",
+        "exitCode": 1,
+        "status": "runtime_error",
+        "stderr": "Exception in thread \\"main\\" java.util.NoSuchElementException
+      	at java.base/java.util.Scanner.throwFor(Scanner.java:937)
+      	at java.base/java.util.Scanner.next(Scanner.java:1594)
+      	at java.base/java.util.Scanner.nextInt(Scanner.java:2258)
+      	at java.base/java.util.Scanner.nextInt(Scanner.java:2212)
+      	at Main.main(Main.java:6)
+      Command exited with non-zero status 1
+      ",
+        "stdout": "",
+      }
+    `);
   }, 8000);
 
   it("throws RTE error", async () => {
@@ -319,20 +324,21 @@ Command exited with non-zero status 1
     );
     const { memory, time, ...data } = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
-Object {
-  "exitCode": 1,
-  "status": "runtime_error",
-  "stderr": "Exception in thread \\"main\\" java.util.NoSuchElementException
-	at java.base/java.util.Scanner.throwFor(Scanner.java:937)
-	at java.base/java.util.Scanner.next(Scanner.java:1594)
-	at java.base/java.util.Scanner.nextInt(Scanner.java:2258)
-	at java.base/java.util.Scanner.nextInt(Scanner.java:2212)
-	at Main.main(Main.java:6)
-Command exited with non-zero status 1
-",
-  "stdout": "",
-}
-`);
+      Object {
+        "compilationMessage": "",
+        "exitCode": 1,
+        "status": "runtime_error",
+        "stderr": "Exception in thread \\"main\\" java.util.NoSuchElementException
+      	at java.base/java.util.Scanner.throwFor(Scanner.java:937)
+      	at java.base/java.util.Scanner.next(Scanner.java:1594)
+      	at java.base/java.util.Scanner.nextInt(Scanner.java:2258)
+      	at java.base/java.util.Scanner.nextInt(Scanner.java:2212)
+      	at Main.main(Main.java:6)
+      Command exited with non-zero status 1
+      ",
+        "stdout": "",
+      }
+    `);
   });
 });
 
@@ -371,6 +377,7 @@ print(a + b + c)`,
     const { memory, time, ...data } = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
       Object {
+        "compilationMessage": null,
         "exitCode": 1,
         "status": "runtime_error",
         "stderr": "  File \\"main.py\\", line 2
@@ -396,6 +403,7 @@ print(a + b + c)`,
     const { memory, time, ...data } = JSON.parse(result.body);
     expect(data).toMatchInlineSnapshot(`
       Object {
+        "compilationMessage": null,
         "exitCode": 1,
         "status": "runtime_error",
         "stderr": "Traceback (most recent call last):
