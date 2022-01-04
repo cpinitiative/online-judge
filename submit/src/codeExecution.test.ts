@@ -198,6 +198,42 @@ describe("C++", () => {
       }
     `);
   });
+
+  it("shows compiler warnings even if compilation succeeds", async () => {
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
+        language: "cpp",
+        compilerOptions:
+          "-std=c++17 -O2 -Wall -Wextra -Wshadow -Wconversion -Wfloat-equal -Wduplicated-cond -Wlogical-op",
+        filename: "main.cpp",
+        sourceCode: `#include <bits/stdc++.h>
+          using namespace std;
+          
+          int main() {
+            int a, b, c; 
+            cout << a << " " << b << " " << c;
+          }`,
+        input: "",
+      })
+    );
+    const { time, memory, stderr, stdout, ...data } = JSON.parse(result.body);
+    expect(data).toMatchInlineSnapshot(`
+      Object {
+        "compilationMessage": "main.cpp: In function ‘int main()’:
+      main.cpp:6:26: warning: ‘a’ is used uninitialized in this function [-Wuninitialized]
+          6 |             cout << a << \\" \\" << b << \\" \\" << c;
+            |                          ^~~
+      main.cpp:6:38: warning: ‘b’ is used uninitialized in this function [-Wuninitialized]
+          6 |             cout << a << \\" \\" << b << \\" \\" << c;
+            |                                      ^~~
+      main.cpp:6:45: warning: ‘c’ is used uninitialized in this function [-Wuninitialized]
+          6 |             cout << a << \\" \\" << b << \\" \\" << c;
+            |                                             ^
+      ",
+        "status": "success",
+      }
+    `);
+  });
 });
 
 describe("Java", () => {
