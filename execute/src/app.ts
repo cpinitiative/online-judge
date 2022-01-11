@@ -5,6 +5,7 @@ import {
   mkdirSync,
   unlinkSync,
   rmdirSync,
+  readFileSync,
 } from "fs";
 import {
   ExecuteProcessOutput,
@@ -24,6 +25,12 @@ export type ExecuteEvent =
       type: "execute";
       payload: string;
       input: string;
+      /**
+       * If provided, in addition to standard input/output,
+       * file I/O will also be used. [fileIOName].in will
+       * be written and [fileIOName].out will be read.
+       */
+      fileIOName?: string;
       timeout?: number;
     };
 
@@ -133,6 +140,10 @@ export const lambdaHandler = async function (
     writeFileSync("/tmp/program.zip", event.payload, "base64");
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
 
+    if (event.fileIOName) {
+      writeFileSync(`/tmp/program/${event.fileIOName}.in`, event.input);
+    }
+
     const spawnResult = spawnSync(
       `ulimit -c 0 && /usr/bin/time -v /usr/bin/timeout ${(
         (event.timeout ?? 5000) / 1000
@@ -145,6 +156,17 @@ export const lambdaHandler = async function (
       }
     );
 
+    let fileIOInfo: Partial<ExecuteProcessOutput> = {};
+    if (event.fileIOName) {
+      if (existsSync(`/tmp/program/${event.fileIOName}.out`)) {
+        fileIOInfo.fileOutput = readFileSync(
+          `/tmp/program/${event.fileIOName}.out`
+        ).toString();
+      } else {
+        fileIOInfo.fileOutput = null;
+      }
+    }
+
     unlinkSync("/tmp/program.zip");
     rmdirSync("/tmp/program", { recursive: true });
     rmdirSync("/tmp/out", { recursive: true });
@@ -152,6 +174,7 @@ export const lambdaHandler = async function (
     return {
       status: "success",
       ...parseReturnInfoOfSpawn(spawnResult),
+      ...fileIOInfo,
     };
   } else {
     return {

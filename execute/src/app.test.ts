@@ -55,13 +55,10 @@ Object {
     expect(compileResult).toMatchInlineSnapshot(`
 Object {
   "message": "main.cpp: In function ‘int main()’:
-main.cpp:3:42: error: ‘cd’ was not declared in this scope
- int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
-                                          ^~
-main.cpp:3:42: note: suggested alternative: ‘c’
- int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
-                                          ^~
-                                          c
+main.cpp:3:42: error: ‘cd’ was not declared in this scope; did you mean ‘c’?
+    3 | int main(){int a, b, c; cin >> a >> b >> cd; cout <<a+b+c << endl;}
+      |                                          ^~
+      |                                          c
 ",
   "status": "compile_error",
 }
@@ -140,6 +137,82 @@ Object {
 `);
     expect(stderr).toMatch(/Assertion `false' failed/);
     expect(stderr).toMatch(/Command exited with non-zero status 134/);
+    checkTimeStderr(stderr);
+  });
+
+  it("works with file I/O", async () => {
+    const compileResult = (await app.lambdaHandler({
+      type: "compile",
+      language: "cpp",
+      compilerOptions: "",
+      filename: "main.cpp",
+      sourceCode: `#include <bits/stdc++.h>
+      using namespace std;
+      int main() {
+        freopen("test.in", "r", stdin);
+        freopen("test.out", "w", stdout);
+        int a, b, c;
+        cin >> a >> b >> c;
+        cout <<a+b+c << endl;
+      }`,
+    })) as app.CompilationResult & { status: "success" };
+    expect(compileResult.status).toBe("success");
+
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
+      type: "execute",
+      payload: compileResult.output,
+      input: "1 2 3",
+      fileIOName: "test",
+    })) as app.ExecutionResult & { status: "success" };
+    expect(runResult).toMatchInlineSnapshot(`
+Object {
+  "exitCode": 0,
+  "exitSignal": null,
+  "fileOutput": "6
+",
+  "processError": null,
+  "status": "success",
+  "stdout": "",
+}
+`);
+    checkTimeStderr(stderr);
+  });
+
+  it("works with regular I/O even when file I/O is an option", async () => {
+    const compileResult = (await app.lambdaHandler({
+      type: "compile",
+      language: "cpp",
+      compilerOptions: "",
+      filename: "main.cpp",
+      sourceCode: `#include <bits/stdc++.h>
+      using namespace std;
+      int main() {
+        int a, b, c;
+        cin >> a >> b >> c;
+        cout <<a+b+c << endl;
+      }`,
+    })) as app.CompilationResult & { status: "success" };
+    expect(compileResult.status).toBe("success");
+
+    // the stderr output from the time command may change from execution to execution
+    const { stderr, ...runResult } = (await app.lambdaHandler({
+      type: "execute",
+      payload: compileResult.output,
+      input: "1 2 3",
+      fileIOName: "test",
+    })) as app.ExecutionResult & { status: "success" };
+    expect(runResult).toMatchInlineSnapshot(`
+Object {
+  "exitCode": 0,
+  "exitSignal": null,
+  "fileOutput": null,
+  "processError": null,
+  "status": "success",
+  "stdout": "6
+",
+}
+`);
     checkTimeStderr(stderr);
   });
 });

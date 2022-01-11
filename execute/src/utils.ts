@@ -25,9 +25,17 @@ export interface ExecuteProcessOutput {
   exitCode: number | null;
   exitSignal: string | null;
   processError: string | null;
+  /**
+   * When executing, if `fileIOName` is given, this is
+   * set to whatever is written in `[fileIOName].out`
+   * or null if there's no such file.
+   */
+  fileOutput?: string | null;
 }
 
-export const parseReturnInfoOfSpawn = (spawnReturn: SpawnSyncReturns<Buffer>): ExecuteProcessOutput => {
+export const parseReturnInfoOfSpawn = (
+  spawnReturn: SpawnSyncReturns<Buffer>
+): ExecuteProcessOutput => {
   return {
     stdout: spawnReturn.stdout?.toString() ?? null,
     stderr: spawnReturn.stderr?.toString() ?? null,
@@ -35,4 +43,4 @@ export const parseReturnInfoOfSpawn = (spawnReturn: SpawnSyncReturns<Buffer>): E
     exitSignal: spawnReturn.signal,
     exitCode: spawnReturn.status,
   };
-}
+};
