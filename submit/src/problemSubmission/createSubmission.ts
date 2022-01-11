@@ -8,6 +8,7 @@ import execute from "../helpers/execute";
 import fetchProblemTestCases from "./fetchProblemTestCases";
 import compile from "../helpers/compile";
 import { compress } from "../helpers/utils";
+import problemIDToFileIOName from "./problemIDToFileIOName";
 
 const statusToVerdictMapping: { [key: string]: string } = {
   correct: "AC",
@@ -128,6 +129,8 @@ export default async function createSubmission(
       })
     );
 
+    const fileIOName =
+      (problemIDToFileIOName as any)[requestData.problemID] ?? undefined;
     const verdicts = await Promise.all(
       testCases.map(async (testCase, index) => {
         let executeOutput;
@@ -136,7 +139,8 @@ export default async function createSubmission(
             compiledExecutable.output,
             testCase.input,
             requestData,
-            problemTimeout
+            problemTimeout,
+            fileIOName
           );
         } catch (e) {
           if (e instanceof Error && e.message.indexOf("EAI_AGAIN") !== -1) {
@@ -151,7 +155,8 @@ export default async function createSubmission(
               compiledExecutable.output,
               testCase.input,
               requestData,
-              problemTimeout
+              problemTimeout,
+              fileIOName
             );
           } else {
             throw e;
@@ -159,10 +164,18 @@ export default async function createSubmission(
         }
         if (executeOutput.status === "success") {
           // check if AC or WA
-          let isCorrect = validateOutput(
-            executeOutput.stdout ?? "",
-            testCase.expectedOutput
-          );
+          let isCorrect;
+          if (fileIOName && executeOutput.fileOutput) {
+            isCorrect = validateOutput(
+              executeOutput.fileOutput ?? "",
+              testCase.expectedOutput
+            );
+          } else {
+            isCorrect = validateOutput(
+              executeOutput.stdout ?? "",
+              testCase.expectedOutput
+            );
+          }
           executeOutput.status = isCorrect ? "correct" : "wrong_answer";
         }
 

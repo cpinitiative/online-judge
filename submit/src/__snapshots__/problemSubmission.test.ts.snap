@@ -913,6 +913,772 @@ Object {
 }
 `;
 
+exports[`C++ handles file I/O (AC) 1`] = `
+Object {
+  "filename": "JEST_TEST.cpp",
+  "language": "cpp",
+  "problemID": "usaco-625",
+  "sourceCode": "// http://usaco.org/index.php?page=viewproblem2&cpid=1111
+// AC
+// File I/O
+
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+int main() {
+  freopen(\\"fencedin.in\\", \\"r\\", stdin);
+  freopen(\\"fencedin.out\\", \\"w\\", stdout);
+  
+  int A, B, N, M;
+  cin >> A >> B >> N >> M;
+
+  vector<int> VA(N + 1), HA(M + 1);
+  for (int i = 0; i < N; i++) {
+    cin >> VA[i];
+  }
+  for (int j = 0; j < M; j++) {
+    cin >> HA[j];
+  }
+
+  sort(VA.begin(), VA.end());
+  for (int i = 0; i < N; i++) {
+    VA[i] = VA[i + 1] - VA[i];
+  }
+  VA[N] = A - VA[N];
+
+  sort(HA.begin(), HA.end());
+  for (int i = 0; i < M; i++) {
+    HA[i] = HA[i + 1] - HA[i];
+  }
+  HA[M] = B - HA[M];
+
+  sort(VA.begin(), VA.end());
+  sort(HA.begin(), HA.end());
+  N++; M++;
+
+  long long result = 1ll * VA[0] * (M - 1) +
+                     1ll * HA[0] * (N - 1);
+  for (int vi = 1, hi = 1; vi < N && hi < M; ) {
+    if (VA[vi] < HA[hi]) {
+      result += VA[vi++] * (M - hi);
+    } else {
+      result += HA[hi++] * (N - vi);
+    }
+  }
+  cout << result << endl;
+
+  return 0;
+}",
+  "status": "done",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 2`] = `
+Object {
+  "expectedOutput": "44
+",
+  "input": "15 15 5 2
+2
+5
+10
+6
+4
+11
+3
+",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 3`] = `
+Object {
+  "expectedOutput": "49489660
+",
+  "input": "1000000 1000000 100 100
+291188
+931733
+694459
+638630
+749751
+238760
+886106
+762142
+517246
+642611
+203388
+491378
+369474
+521162
+899808
+515894
+181906
+384967
+89477
+457040
+5247
+595890
+702862
+958156
+466119
+22392
+723141
+665357
+176213
+703604
+515031
+981604
+635338
+723694
+134439
+899293
+962453
+20546
+175640
+479699
+177361
+379027
+485281
+546834
+414393
+899294
+576933
+596298
+798465
+666409
+567543
+803711
+776504
+270405
+761868
+242623
+807000
+999213
+907979
+497417
+702817
+423010
+479022
+338155
+660909
+127665
+751652
+623362
+662414
+927291
+617266
+353980
+820522
+102547
+900813
+234916
+516045
+991950
+345418
+314511
+172565
+427165
+118222
+949068
+697569
+394294
+705895
+504570
+393507
+613874
+1987
+96325
+551088
+995212
+948683
+211997
+637082
+700336
+349564
+299496
+141832
+481034
+653475
+962354
+97785
+68494
+711474
+613830
+574648
+571096
+928340
+261417
+998261
+560766
+724689
+210035
+955060
+430584
+228809
+348567
+558662
+745000
+959095
+109751
+740212
+907779
+835951
+891498
+122320
+699719
+705199
+778355
+180753
+872878
+254914
+278538
+455576
+966387
+406572
+30225
+51689
+334912
+805845
+49950
+409882
+530535
+259984
+364942
+961118
+488793
+227714
+519781
+747997
+701013
+143736
+2414
+122997
+493891
+893912
+245316
+193611
+599111
+537876
+888567
+471989
+792789
+167105
+441770
+759177
+87881
+471994
+325070
+936996
+277839
+375019
+346879
+322578
+149207
+711820
+283697
+152204
+453738
+317682
+900200
+154752
+975621
+902614
+277748
+469512
+796526
+37269
+663122
+909841
+575144
+65895
+896034
+367933
+232999
+337804
+641314
+",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 4`] = `
+Object {
+  "expectedOutput": "6587050000
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 5`] = `
+Object {
+  "expectedOutput": "248582783990
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 6`] = `
+Object {
+  "expectedOutput": "1013328227976
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 7`] = `
+Object {
+  "expectedOutput": "2528082945640
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 8`] = `
+Object {
+  "expectedOutput": "4969887368032
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 9`] = `
+Object {
+  "expectedOutput": "7456968418998
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 10`] = `
+Object {
+  "expectedOutput": "9966603653853
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (AC) 11`] = `
+Object {
+  "expectedOutput": "12426060043945
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "AC",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 1`] = `
+Object {
+  "filename": "JEST_TEST.cpp",
+  "language": "cpp",
+  "problemID": "usaco-625",
+  "sourceCode": "// http://usaco.org/index.php?page=viewproblem2&cpid=1111
+// AC
+// File I/O
+
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+int main() {
+  freopen(\\"fencedin.in\\", \\"r\\", stdin);
+  freopen(\\"fencedin.out\\", \\"w\\", stdout);
+  
+  int A, B, N, M;
+  cin >> A >> B >> N >> M;
+
+  vector<int> VA(N + 1), HA(M + 1);
+  for (int i = 0; i < N; i++) {
+    cin >> VA[i];
+  }
+  for (int j = 0; j < M; j++) {
+    cin >> HA[j];
+  }
+
+  sort(VA.begin(), VA.end());
+  for (int i = 0; i < N; i++) {
+    VA[i] = VA[i + 1] - VA[i];
+  }
+  VA[N] = A - VA[N];
+
+  sort(HA.begin(), HA.end());
+  for (int i = 0; i < M; i++) {
+    HA[i] = HA[i + 1] - HA[i];
+  }
+  HA[M] = B - HA[M];
+
+  sort(VA.begin(), VA.end());
+  sort(HA.begin(), HA.end());
+  N++; M++;
+
+  long long result = 1ll * VA[0] * (M - 1) +
+                     1ll * HA[0] * (N - 1);
+  for (int vi = 1, hi = 1; vi < N && hi < M; ) {
+    if (VA[vi] < HA[hi]) {
+      result += VA[vi++] * (M - hi);
+    } else {
+      result += HA[hi++] * (N - vi);
+    }
+  }
+  cout << result+1 << endl;
+
+  return 0;
+}",
+  "status": "done",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 2`] = `
+Object {
+  "expectedOutput": "44
+",
+  "input": "15 15 5 2
+2
+5
+10
+6
+4
+11
+3
+",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 3`] = `
+Object {
+  "expectedOutput": "49489660
+",
+  "input": "1000000 1000000 100 100
+291188
+931733
+694459
+638630
+749751
+238760
+886106
+762142
+517246
+642611
+203388
+491378
+369474
+521162
+899808
+515894
+181906
+384967
+89477
+457040
+5247
+595890
+702862
+958156
+466119
+22392
+723141
+665357
+176213
+703604
+515031
+981604
+635338
+723694
+134439
+899293
+962453
+20546
+175640
+479699
+177361
+379027
+485281
+546834
+414393
+899294
+576933
+596298
+798465
+666409
+567543
+803711
+776504
+270405
+761868
+242623
+807000
+999213
+907979
+497417
+702817
+423010
+479022
+338155
+660909
+127665
+751652
+623362
+662414
+927291
+617266
+353980
+820522
+102547
+900813
+234916
+516045
+991950
+345418
+314511
+172565
+427165
+118222
+949068
+697569
+394294
+705895
+504570
+393507
+613874
+1987
+96325
+551088
+995212
+948683
+211997
+637082
+700336
+349564
+299496
+141832
+481034
+653475
+962354
+97785
+68494
+711474
+613830
+574648
+571096
+928340
+261417
+998261
+560766
+724689
+210035
+955060
+430584
+228809
+348567
+558662
+745000
+959095
+109751
+740212
+907779
+835951
+891498
+122320
+699719
+705199
+778355
+180753
+872878
+254914
+278538
+455576
+966387
+406572
+30225
+51689
+334912
+805845
+49950
+409882
+530535
+259984
+364942
+961118
+488793
+227714
+519781
+747997
+701013
+143736
+2414
+122997
+493891
+893912
+245316
+193611
+599111
+537876
+888567
+471989
+792789
+167105
+441770
+759177
+87881
+471994
+325070
+936996
+277839
+375019
+346879
+322578
+149207
+711820
+283697
+152204
+453738
+317682
+900200
+154752
+975621
+902614
+277748
+469512
+796526
+37269
+663122
+909841
+575144
+65895
+896034
+367933
+232999
+337804
+641314
+",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 4`] = `
+Object {
+  "expectedOutput": "6587050000
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 5`] = `
+Object {
+  "expectedOutput": "248582783990
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 6`] = `
+Object {
+  "expectedOutput": "1013328227976
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 7`] = `
+Object {
+  "expectedOutput": "2528082945640
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 8`] = `
+Object {
+  "expectedOutput": "4969887368032
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 9`] = `
+Object {
+  "expectedOutput": "7456968418998
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 10`] = `
+Object {
+  "expectedOutput": "9966603653853
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
+exports[`C++ handles file I/O (WA) 11`] = `
+Object {
+  "expectedOutput": "12426060043945
+",
+  "input": "[Truncated]",
+  "stderr": "",
+  "stdout": "",
+  "verdict": "WA",
+}
+`;
+
 exports[`C++ supports a custom submission ID 1`] = `
 Object {
   "filename": "JEST_TEST.cpp",

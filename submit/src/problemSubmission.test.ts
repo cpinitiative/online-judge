@@ -1,3 +1,6 @@
+// WARNING: since problem submissions use fetch to return submission ID
+// immediately, this doesn't actually test local code entirely...
+
 import { readFileSync } from "fs";
 import path from "path";
 import {
@@ -166,5 +169,39 @@ Object {
   "message": "A submission with the given submissionID already exists.",
 }
 `);
+  }, 18000);
+
+  it("handles file I/O (AC)", async () => {
+    const result = await appHandlerPromise(
+      generateProblemSubmissionRequest({
+        language: "cpp",
+        filename: "JEST_TEST.cpp",
+        problemID: "usaco-625",
+        sourceCode: readFileSync(
+          path.join(__dirname, "testFiles/cpp_625_fileio_ac.cpp")
+        ).toString(),
+      })
+    );
+    const data = JSON.parse(result.body);
+    const submission = await waitForSubmissionFinish(data.submissionID);
+    jestCheckSubmission(submission);
+    expect(submission.verdict).toBe("AC");
+  }, 18000);
+
+  it("handles file I/O (WA)", async () => {
+    const result = await appHandlerPromise(
+      generateProblemSubmissionRequest({
+        language: "cpp",
+        filename: "JEST_TEST.cpp",
+        problemID: "usaco-625",
+        sourceCode: readFileSync(
+          path.join(__dirname, "testFiles/cpp_625_fileio_wa.cpp")
+        ).toString(),
+      })
+    );
+    const data = JSON.parse(result.body);
+    const submission = await waitForSubmissionFinish(data.submissionID);
+    jestCheckSubmission(submission);
+    expect(submission.verdict).toBe("WA");
   }, 18000);
 });

@@ -17,6 +17,8 @@ export interface CodeExecutionResult {
   // note: if error, this won't be set and stderr will be set instead.
   // future todo, fix this behavior?
   compilationMessage: string | null;
+  // for file I/O submissions
+  fileOutput?: string | null;
 }
 
 export interface ProblemSubmissionRequestData {

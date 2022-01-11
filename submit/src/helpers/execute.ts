@@ -9,11 +9,13 @@ export default async function execute(
   compiledExecutable: string,
   problemInput: string,
   executionStatisticsData: { language: "cpp" | "java" | "py" },
-  timeout: number = 5000
+  timeout: number = 5000,
+  fileIOName?: string
 ) {
   // deliberately async -- don't hold up the rest of the function execution while waiting for dynamodb
   updateCodeExecutionStatistics(executionStatisticsData);
 
+  const fileIOInfo = fileIOName ? { fileIOName } : {};
   const executeCommand = new InvokeCommand({
     FunctionName: "online-judge-ExecuteFunction",
     Payload: Buffer.from(
@@ -22,6 +24,7 @@ export default async function execute(
         payload: compiledExecutable,
         input: problemInput,
         timeout,
+        ...fileIOInfo,
       })
     ),
   });
@@ -38,7 +41,8 @@ export default async function execute(
     };
   }
 
-  const { stdout, exitCode, exitSignal, processError } = executeData;
+  const { stdout, exitCode, exitSignal, processError, fileOutput } =
+    executeData;
 
   const {
     restOfString: stderr,
@@ -55,6 +59,7 @@ export default async function execute(
       time,
       memory,
       exitCode,
+      fileOutput,
     };
   }
 
@@ -66,6 +71,7 @@ export default async function execute(
       time,
       memory,
       exitCode,
+      fileOutput,
     };
   }
 
@@ -75,5 +81,6 @@ export default async function execute(
     stderr,
     time,
     memory,
+    fileOutput,
   };
 }
