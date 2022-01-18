@@ -191,3 +191,7 @@ May be able to be temporarily resolved by forcing lambdas to restart:
 aws lambda update-function-configuration --function-name "online-judge-SubmitFunction" --description "upd"
 aws lambda update-function-configuration --function-name "online-judge-ExecuteFunction" --description "upd"
 ```
+
+### Stack Size
+
+See https://github.com/cpinitiative/online-judge/issues/10
