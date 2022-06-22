@@ -254,6 +254,20 @@ export const lambdaHandler = (
             { statusCode: 400 }
           )
         );
+      } else if (
+        rawRequestData.fileIOName &&
+        !/^[a-z0-9]+$/i.test(rawRequestData.fileIOName)
+      ) {
+        callback(
+          null,
+          buildResponse(
+            {
+              message:
+                "File IO Name must be an alphanumeric string, such as `cowdating`.",
+            },
+            { statusCode: 400 }
+          )
+        );
       } else {
         compile(rawRequestData)
           .then((compiled) => {
@@ -266,7 +280,9 @@ export const lambdaHandler = (
             return execute(
               compiled.output,
               rawRequestData.input,
-              rawRequestData
+              rawRequestData,
+              undefined,
+              rawRequestData.fileIOName || undefined
             ).then((execute_result) => ({
               compilationMessage: compiled.compilationMessage,
               ...execute_result,

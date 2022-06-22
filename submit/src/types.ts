@@ -4,6 +4,8 @@ export interface CodeExecutionRequestData {
   compilerOptions: string;
   sourceCode: string;
   input: string;
+  // If given, will support stdio + fileIOName.in / fileIOName.out
+  fileIOName?: string;
 }
 
 export interface CodeExecutionResult {

@@ -234,6 +234,42 @@ describe("C++", () => {
       }
     `);
   });
+
+  it("works with file IO", async () => {
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
+        language: "cpp",
+        compilerOptions: "",
+        filename: "main.cpp",
+        sourceCode: `#include <bits/stdc++.h>\nusing namespace std;\nint main(){freopen("test.in", "r", stdin); freopen("test.out", "w", stdout); int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}`,
+        input: "1 2 3",
+        fileIOName: "test",
+      })
+    );
+    const data = JSON.parse(result.body);
+    expect(data.status).toBe("success");
+    expect(data.stderr).toBe("");
+    expect(data.stdout).toBe("");
+    expect(data.fileOutput).toBe("6\n");
+    expect(data.memory).toMatch(/[0-9]{4}/);
+    expect(data.time).toMatch(/\d\.\d\d/);
+  });
+
+  it("doesn't allow malicious file IO names", async () => {
+    const result = await appHandlerPromise(
+      generateCodeExecutionRequest({
+        language: "cpp",
+        compilerOptions: "",
+        filename: "main.cpp",
+        sourceCode: `#include <bits/stdc++.h>\nusing namespace std;\nint main(){freopen("test.in", "r", stdin); freopen("test.out", "w", stdout); int a, b, c; cin >> a >> b >> c; cout <<a+b+c << endl;}`,
+        input: "1 2 3",
+        fileIOName: "3%",
+      })
+    );
+    const data = JSON.parse(result.body);
+    expect(result.statusCode).toBe(400);
+    expect(data.message).toMatch(/File IO Name must be an alphanumeric string/);
+  });
 });
 
 describe("Java", () => {
