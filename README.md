@@ -128,6 +128,8 @@ Until API docs can be properly written, you can refer to `submit/src/types.ts` t
 
 Note: REST API is used over HTTP API because of [CORS issues](https://github.com/aws/aws-sam-cli/issues/2637) with HTTP.
 
+**Warning**: Not for public use; contact us if you'd like to use the API. The API may change without warning.
+
 ## Misc Notes
 
 ### Installing GCC on Amazon Linux 2
