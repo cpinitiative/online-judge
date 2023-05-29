@@ -145,7 +145,7 @@ export const lambdaHandler = (
             // Don't wait for lambda to finish
             // Note: need to use fetch to get the right event format
             fetch(
-              `https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
+              `https://ggzk2rm2ad.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
               {
                 method: "POST",
                 headers: {
@@ -320,7 +320,7 @@ export const lambdaHandler = (
         buildResponse(
           {
             message:
-              "Invalid request " + event.httpMethod + " " + event.resource,
+              "Invalid request: " + event.httpMethod + " " + event.resource,
           },
           {
             statusCode: 400,

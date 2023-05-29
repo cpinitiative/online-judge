@@ -180,7 +180,7 @@ export const lambdaHandler = async function (
     return {
       status: "internal_error",
       // @ts-expect-error
-      message: "Unknown event type " + event.type,
+      message: "Unknown event type: " + event.type,
     };
   }
 };

@@ -39,7 +39,7 @@ Resources:
       CodeUri: submit/
       AutoPublishAlias: live
       Handler: dist/src/app.lambdaHandler
-      Runtime: nodejs14.x
+      Runtime: nodejs18.x
       Timeout: 10
       Policies: 
         - LambdaInvokePolicy:
