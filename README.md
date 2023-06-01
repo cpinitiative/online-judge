@@ -1,3 +1,11 @@
+Massive todo list before this can be published:
+- modify VPC settings to restrict internet access
+- don't publish test cases
+- ...
+- handle batched grading (especially execution verdict typing)
+- handle custom graders: execute now takes in an optional grader compiled file, as well as s3 link to expected output.
+- IMPORTANT: Fix ECR lifecycle stuff
+
 # Serverless Online Judge
 
 From the Competitive Programming Initiative
@@ -79,6 +87,8 @@ sam build --cached --parallel && sam local invoke ExecuteFunction -e execute/eve
 
 You don't have to rerun `sam local start-api` when your code changes. Note that the execute lambda this calls is the execution lambda that's currently deployed on AWS, not the local execution lambda.
 
+If you encounter timeout issues, change timeout in `template.yaml` temporarily.
+
 ---
 
 Alternatively, you can run `npm run watch` followed by `node dist/src/runLambdaLocally.js` if you don't want to have to make a request to the API route.
@@ -93,6 +103,24 @@ If snapshots need to be updated:
 
 ```
 npm run test -- -u
+```
+
+You can also run these tests in the Docker image itself, especially if you're getting some ulimit cannot be set error.
+
+#### Setting up docker
+
+NOTE: I never got this working (for running npm run test...)
+
+```
+cd execute
+# maybe you only need the platform argument on mac?
+# this took like 15 minutes on an M1
+docker build . --platform linux/amd64 -t oj-execute
+docker run --platform linux/amd64 -it --entrypoint /bin/bash oj-execute
+
+# note: really slow D:
+# AWS_EXECUTION_ENV is important! otherwise it will try and fail to use g++
+AWS_EXECUTION_ENV=true npm run test -- -t "C\+\+"
 ```
 
 #### Testing Builds
@@ -116,9 +144,17 @@ sam build
 sam deploy
 ```
 
+To deploy with a stack name:
+
+```
+sam deploy --stack-name Stage
+```
+
 ## API
 
-The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod
+The API can be accessed at https://ggzk2rm2ad.execute-api.us-west-1.amazonaws.com/Prod
+
+Staging: https://kmazh7pzpg.execute-api.us-west-1.amazonaws.com/Prod
 
 - `POST /execute`: Code execution. Ex: USACO Guide IDE.
 - `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups

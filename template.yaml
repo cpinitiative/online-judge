@@ -19,15 +19,19 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      FunctionName: online-judge-ExecuteFunction
+      FunctionName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-ExecuteFunction-${AWS::StackName}"
+          - online-judge-ExecuteFunction
       AutoPublishAlias: live
-      Timeout: 8
+      Timeout: 10
       # we should probably not hardcode this...
-      VpcConfig:
-        SecurityGroupIds:
-          - sg-0bc4a61cfc9289d08
-        SubnetIds:
-          - subnet-097720d648805d3ed
+      # VpcConfig:
+      #   SecurityGroupIds:
+      #     - sg-0bc4a61cfc9289d08
+      #   SubnetIds:
+      #     - subnet-097720d648805d3ed
     Metadata:
       DockerTag: nodejs14.x-v1
       DockerContext: ./execute
@@ -35,12 +39,16 @@ Resources:
   SubmitFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: online-judge-SubmitFunction
+      FunctionName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-SubmitFunction-${AWS::StackName}"
+          - online-judge-SubmitFunction
       CodeUri: submit/
       AutoPublishAlias: live
       Handler: dist/src/app.lambdaHandler
       Runtime: nodejs14.x
-      Timeout: 10
+      Timeout: 60
       Policies: 
         - LambdaInvokePolicy:
             FunctionName:
@@ -73,7 +81,11 @@ Resources:
   StatisticsDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties: 
-      TableName: online-judge-statistics
+      TableName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-statistics-${AWS::StackName}"
+          - online-judge-statistics
       AttributeDefinitions: 
         - AttributeName: id
           AttributeType: S
@@ -85,7 +97,11 @@ Resources:
   DynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties: 
-      TableName: online-judge
+      TableName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-${AWS::StackName}"
+          - online-judge
       AttributeDefinitions: 
         - AttributeName: submissionID
           AttributeType: S
@@ -108,3 +124,6 @@ Outputs:
   DynamoDBTable:
     Description: "Main Dyanmo DB Table ARN"
     Value: !GetAtt DynamoDBTable.Arn
+
+Conditions:
+  IsNotProdStack: !Not [!Equals [!Ref "AWS::StackName", "Prod"]]

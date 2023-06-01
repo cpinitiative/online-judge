@@ -1,6 +1,12 @@
+import {
+  InvokeWithResponseStreamCommand,
+  InvokeWithResponseStreamCommandInput,
+} from "@aws-sdk/client-lambda";
 import { APIGatewayProxyResult } from "aws-lambda";
 import type { Readable } from "stream";
 import { gunzip, gunzipSync, gzip } from "zlib";
+import { lambdaClient } from "../clients";
+import { TextDecoder } from "util";
 
 export const extractTimingInfo = (
   data: string | null
@@ -80,4 +86,51 @@ export async function compress(data: string): Promise<Buffer> {
 
 export function decompress(data: Uint8Array): string {
   return gunzipSync(data).toString();
+}
+
+function Decodeuint8arr(uint8array: any) {
+  return new TextDecoder("utf-8").decode(uint8array);
+}
+
+export async function getLambdaStreamingResponse(
+  params: InvokeWithResponseStreamCommandInput
+) {
+  const compileCommand = new InvokeWithResponseStreamCommand(params);
+  const response = await lambdaClient.send(compileCommand);
+
+  const events = response.EventStream;
+
+  let str = "";
+  for await (const event of events!) {
+    // `PayloadChunk`: These contain the actual raw bytes of the chunk
+    // It has a single property: `Payload`
+    if (event.PayloadChunk) {
+      // Decode the raw bytes into a string a human can read
+      str += Decodeuint8arr(event.PayloadChunk.Payload);
+    }
+
+    // `InvokeComplete`: This event is sent when the function is done streaming.
+    // It has the following properties:
+    // `LogResult`: Contains the last 4KiB of execution logs as a base64 encoded
+    //     string when Tail Logs are enabled.
+    // `ErrorCode`: The error code if the function ran into an error mid-stream.
+    // `ErrorDetails`: Additional details about the error if the function ran into
+    //     an error mid-stream.
+    if (event.InvokeComplete) {
+      if (event.InvokeComplete.ErrorCode) {
+        console.error(
+          "Error Code (invoking streaming lambda response failed):",
+          event.InvokeComplete.ErrorCode
+        );
+        console.error("Details:", event.InvokeComplete.ErrorDetails);
+      }
+
+      if (event.InvokeComplete.LogResult) {
+        // const buff = Buffer.from(event.InvokeComplete.LogResult, "base64");
+        // console.log("Logs:", buff.toString("utf-8"));
+      }
+    }
+  }
+
+  return str;
 }

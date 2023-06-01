@@ -74,7 +74,7 @@ export const lambdaHandler = (
 
             if (!requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED) {
               const dbGetParams = {
-                TableName: "online-judge",
+                TableName: "online-judge-Stage",
                 Key: {
                   submissionID: {
                     S: submissionID,
@@ -103,7 +103,7 @@ export const lambdaHandler = (
           if (!requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED) {
             const compressedSourceCode = await compress(requestData.sourceCode);
             const dbCommand = new PutItemCommand({
-              TableName: "online-judge",
+              TableName: "online-judge-Stage",
               Item: {
                 timestamp: {
                   S: "" + new Date().getTime(),
@@ -145,7 +145,7 @@ export const lambdaHandler = (
             // Don't wait for lambda to finish
             // Note: need to use fetch to get the right event format
             fetch(
-              `https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
+              `https://kmazh7pzpg.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
               {
                 method: "POST",
                 headers: {
@@ -162,7 +162,12 @@ export const lambdaHandler = (
               })
             );
           } else {
-            await createSubmission(submissionID, requestData);
+            await createSubmission(
+              submissionID,
+              requestData,
+              // @ts-ignore idk why the types are wrong
+              context?.awsRequestId
+            );
 
             let response = undefined;
 

@@ -22,23 +22,24 @@ const statusToVerdictMapping: { [key: string]: string } = {
 
 export default async function createSubmission(
   submissionID: string,
-  requestData: ProblemSubmissionRequestData
+  requestData: ProblemSubmissionRequestData,
+  awsRequestID?: string
 ) {
   try {
-    const problemTimeout = 2000; // todo actually properly determine this?
+    const problemTimeout = 4000; // todo actually properly determine this?
 
     let [testCases, compiledExecutable] = await Promise.all([
       fetchProblemTestCases(requestData.problemID),
       compile({
         ...requestData,
-        compilerOptions: "", // todo. some flags to keep in mind: http://usaco.org/index.php?page=instructions
+        compilerOptions: "-std=c++17 -O2", // todo. some flags to keep in mind: http://usaco.org/index.php?page=instructions
       }),
     ]);
 
     if (compiledExecutable.status === "compile_error") {
       await dbClient.send(
         new UpdateItemCommand({
-          TableName: "online-judge",
+          TableName: "online-judge-Stage",
           Key: {
             submissionID: {
               S: submissionID,
@@ -65,7 +66,7 @@ export default async function createSubmission(
     } else if (compiledExecutable.status === "internal_error") {
       await dbClient.send(
         new UpdateItemCommand({
-          TableName: "online-judge",
+          TableName: "online-judge-Stage",
           Key: {
             submissionID: {
               S: submissionID,
@@ -98,7 +99,7 @@ export default async function createSubmission(
 
     await dbClient.send(
       new UpdateItemCommand({
-        TableName: "online-judge",
+        TableName: "online-judge-Stage",
         Key: {
           submissionID: {
             S: submissionID,
@@ -135,12 +136,15 @@ export default async function createSubmission(
       testCases.map(async (testCase, index) => {
         let executeOutput;
         try {
+          // also change the retry below...
           executeOutput = await execute(
             compiledExecutable.output,
-            testCase.input,
+            // testCase.input,
+            testCase.inputFile,
             requestData,
             problemTimeout,
-            fileIOName
+            fileIOName,
+            true
           );
         } catch (e) {
           if (e instanceof Error && e.message.indexOf("EAI_AGAIN") !== -1) {
@@ -153,10 +157,12 @@ export default async function createSubmission(
             await new Promise((resolve) => setTimeout(resolve, index * 500));
             executeOutput = await execute(
               compiledExecutable.output,
-              testCase.input,
+              // testCase.input,
+              testCase.inputFile,
               requestData,
               problemTimeout,
-              fileIOName
+              fileIOName,
+              true
             );
           } else {
             throw e;
@@ -184,7 +190,7 @@ export default async function createSubmission(
             ? statusToVerdictMapping[executeOutput.status]
             : "IE";
         const updateParams: UpdateItemCommandInput = {
-          TableName: "online-judge",
+          TableName: "online-judge-Stage",
           Key: {
             submissionID: {
               S: submissionID,
@@ -230,17 +236,73 @@ export default async function createSubmission(
       })
     );
 
-    let finalVerdict = "AC";
-    for (let verdict of verdicts) {
-      if (verdict !== "AC") {
-        finalVerdict = verdict;
-        break;
+    // TODO CAMP CHANGE
+    let finalVerdict;
+    if (requestData.problemID.startsWith("CAMP")) {
+      finalVerdict = "";
+      let batch_data = "BAD";
+      if (requestData.problemID == "CAMP_flappy") {
+        batch_data = `0 1-2
+20 1-28
+20 1-38
+60 1-55`;
+      } else if (requestData.problemID == "CAMP_mooball") {
+        batch_data = `10 1-17
+30 1-32
+60 1-47`;
+      } else if (requestData.problemID == "CAMP_optnav") {
+        batch_data = `0 1
+20 1-5
+40 1-9
+40 1-21`;
+      } else if (requestData.problemID == "CAMP_threestack") {
+        batch_data = `0 1
+10 1-12
+50 1-22
+40 1-32`;
+      }
+      if (batch_data === "BAD") throw new Error("batch data bad");
+
+      let total_sum = 0;
+      for (let line of batch_data.split("\n")) {
+        let score = parseInt(line.split(" ")[0], 10);
+        total_sum += score;
+        let test_cases = [];
+        for (let group of line.split(" ")[1].split(",")) {
+          if (group.indexOf("-") !== -1) {
+            let left = parseInt(group.split("-")[0]);
+            let right = parseInt(group.split("-")[1]);
+            for (let i = left; i <= right; i++) {
+              test_cases.push(i);
+            }
+          } else {
+            test_cases.push(parseInt(group));
+          }
+        }
+        let toAdd = "AC";
+        for (let tc of test_cases) {
+          tc--;
+          if (verdicts[tc] !== "AC") {
+            toAdd = verdicts[tc];
+            break;
+          }
+        }
+        finalVerdict += toAdd + ",";
+      }
+    } else {
+      finalVerdict = "AC";
+      for (let verdict of verdicts) {
+        if (verdict !== "AC") {
+          finalVerdict = verdict;
+          break;
+        }
       }
     }
+    // END TODO
 
     await dbClient.send(
       new UpdateItemCommand({
-        TableName: "online-judge",
+        TableName: "online-judge-Stage",
         Key: {
           submissionID: {
             S: submissionID,
@@ -265,7 +327,7 @@ export default async function createSubmission(
 
     await dbClient.send(
       new UpdateItemCommand({
-        TableName: "online-judge",
+        TableName: "online-judge-Stage",
         Key: {
           submissionID: {
             S: submissionID,
@@ -286,7 +348,14 @@ export default async function createSubmission(
             B: await compress("An unknown internal error occurred."),
           },
           ":debugData": {
-            B: await compress((e as Error).message ?? e),
+            B: await compress(
+              "Message: " +
+                ((e as Error).message ?? e) +
+                "\n\nStack: " +
+                ((e as Error).stack ?? "[undefined]") +
+                "\n\nAWS Request ID: " +
+                (awsRequestID ?? "[not given?]")
+            ),
           },
         },
       })

@@ -38,11 +38,9 @@ process.env.NODE_ENV = "test";
   app.lambdaHandler(
     generateProblemSubmissionRequest({
       language: "cpp",
-      filename: "JEST_TEST.cpp",
-      problemID: "usaco-625",
-      sourceCode: readFileSync(
-        path.join(__dirname, "testFiles/cpp_625_fileio_ac.cpp")
-      ).toString(),
+      filename: "scc.cpp",
+      problemID: "hello-world",
+      sourceCode: ``,
       wait: true,
     }),
     // generateProblemSubmissionRequest({
@@ -66,7 +64,7 @@ process.env.NODE_ENV = "test";
       if (error) {
         console.error(error);
       } else {
-        console.log(result);
+        console.log(JSON.parse(result?.body ?? "{}"));
       }
     }
   );

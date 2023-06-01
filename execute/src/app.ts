@@ -9,9 +9,16 @@ import {
 } from "fs";
 import {
   ExecuteProcessOutput,
+  compress,
   parseReturnInfoOfSpawn,
   zipAndRemoveOutDir,
 } from "./utils";
+import { gunzipSync } from "zlib";
+import { Readable } from "stream";
+
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+
+export const s3Client = new S3Client({ region: "us-west-1" });
 
 export type ExecuteEvent =
   | {
@@ -25,6 +32,11 @@ export type ExecuteEvent =
       type: "execute";
       payload: string;
       input: string;
+      /**
+       * If true, fetches input from S3. expects file.Key
+       * Defaults to false
+       */
+      fetchInputFromS3?: boolean;
       /**
        * If provided, in addition to standard input/output,
        * file I/O will also be used. [fileIOName].in will
@@ -62,7 +74,7 @@ export type ExecutionResult =
 
 const MAX_BUFFER_SIZE = 1024 * 1024 * 30; // 30mb. note that 6mb is API gateway limit for lambda
 
-export const lambdaHandler = async function (
+export const promiseLambdaHandler = async function (
   event: ExecuteEvent
 ): Promise<CompilationResult | ExecutionResult> {
   if (existsSync("/tmp/out")) {
@@ -118,7 +130,9 @@ export const lambdaHandler = async function (
         shell: true,
       }
     );
-    const processOutput = parseReturnInfoOfSpawn(spawnResult);
+    const processOutput = await parseReturnInfoOfSpawn(spawnResult, {
+      isOutputCompressed: false,
+    });
     if (spawnResult.status !== 0) {
       return {
         status: "compile_error",
@@ -137,6 +151,18 @@ export const lambdaHandler = async function (
       processOutput: processOutput,
     };
   } else if (event.type === "execute") {
+    // if (event.fetchInputFromS3) {
+    //   const fileParams = {
+    //     Bucket: "cpi-onlinejudge",
+    //     Key: event.input,
+    //   };
+    //   const fileCommand = new GetObjectCommand(fileParams);
+    //   const response = (await s3Client.send(fileCommand)) as any;
+    //   const content = await streamToString(response.Body);
+    //   event.input = content;
+    // } else {
+    event.input = decompress(Buffer.from(event.input, "base64"));
+    // }
     writeFileSync("/tmp/program.zip", event.payload, "base64");
     execFileSync("unzip", ["-o", "/tmp/program.zip", "-d", "/tmp/program"]);
 
@@ -145,6 +171,8 @@ export const lambdaHandler = async function (
     }
 
     const spawnResult = spawnSync(
+      // uncomment the below for macs (also run brew install coreutils)
+      // `/opt/homebrew/bin/gtime -v /opt/homebrew/bin/gtimeout ${(
       `ulimit -c 0 && ulimit -s unlimited && /usr/bin/time -v /usr/bin/timeout ${(
         (event.timeout ?? 5000) / 1000
       ).toFixed(3)}s sh /tmp/program/run.sh`,
@@ -173,7 +201,7 @@ export const lambdaHandler = async function (
 
     return {
       status: "success",
-      ...parseReturnInfoOfSpawn(spawnResult),
+      ...(await parseReturnInfoOfSpawn(spawnResult)),
       ...fileIOInfo,
     };
   } else {
@@ -184,3 +212,26 @@ export const lambdaHandler = async function (
     };
   }
 };
+
+export function decompress(data: Uint8Array): string {
+  return gunzipSync(data).toString();
+}
+
+declare const awslambda: any;
+
+export const lambdaHandler = awslambda.streamifyResponse(
+  async (event: any, responseStream: any) => {
+    const resp = await promiseLambdaHandler(event);
+    responseStream.write(JSON.stringify(resp));
+    responseStream.end();
+  }
+);
+
+export async function streamToString(stream: Readable): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+  });
+}

@@ -1,5 +1,6 @@
 import { execFileSync, SpawnSyncReturns } from "child_process";
 import { readFileSync, unlinkSync, rmdirSync } from "fs";
+import { gzip } from "zlib";
 
 /**
  * Zips /tmp/out, deletes the directory, and returns the base64 encoded ZIP file
@@ -33,14 +34,37 @@ export interface ExecuteProcessOutput {
   fileOutput?: string | null;
 }
 
-export const parseReturnInfoOfSpawn = (
-  spawnReturn: SpawnSyncReturns<Buffer>
-): ExecuteProcessOutput => {
+export const parseReturnInfoOfSpawn = async (
+  spawnReturn: SpawnSyncReturns<Buffer>,
+  { isOutputCompressed } = { isOutputCompressed: true }
+): Promise<ExecuteProcessOutput> => {
+  if (isOutputCompressed) {
+    return {
+      stdout: spawnReturn.stdout
+        ? (await compress(spawnReturn.stdout.toString())).toString("base64")
+        : null,
+      stderr: spawnReturn.stderr
+        ? (await compress(spawnReturn.stderr.toString())).toString("base64")
+        : null,
+      processError: spawnReturn.error?.message ?? null,
+      exitSignal: spawnReturn.signal,
+      exitCode: spawnReturn.status,
+    };
+  }
   return {
-    stdout: spawnReturn.stdout?.toString() ?? null,
-    stderr: spawnReturn.stderr?.toString() ?? null,
+    stdout: spawnReturn.stdout ? spawnReturn.stdout.toString() : null,
+    stderr: spawnReturn.stderr ? spawnReturn.stderr.toString() : null,
     processError: spawnReturn.error?.message ?? null,
     exitSignal: spawnReturn.signal,
     exitCode: spawnReturn.status,
   };
 };
+
+export async function compress(data: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    gzip(data, (error, result) => {
+      if (error) reject(error);
+      resolve(result);
+    });
+  });
+}

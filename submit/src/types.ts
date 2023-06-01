@@ -70,6 +70,7 @@ export interface ProblemSubmissionTestCaseResult {
   stderr: string;
 }
 
+// TODO: properly type this for batched grading
 export type ExecutionVerdict =
   | "AC"
   | "WA"
@@ -77,7 +78,8 @@ export type ExecutionVerdict =
   | "MLE"
   | "TLE"
   | "CE"
-  | "IE"; // IE is internal error
+  | "IE" // IE is internal error
+  | "[Hidden]";
 
 export interface FirebaseSubmission {
   language: string;

@@ -3,35 +3,42 @@ import { lambdaClient } from "../clients";
 import { CodeExecutionRequestData, CodeExecutionResult } from "../types";
 import compile from "./compile";
 import updateCodeExecutionStatistics from "./updateCodeExecutionStatistics";
-import { buildResponse, extractTimingInfo } from "./utils";
+import {
+  buildResponse,
+  compress,
+  decompress,
+  extractTimingInfo,
+  getLambdaStreamingResponse,
+} from "./utils";
 
 export default async function execute(
   compiledExecutable: string,
   problemInput: string,
   executionStatisticsData: { language: "cpp" | "java" | "py" },
   timeout: number = 5000,
-  fileIOName?: string
+  fileIOName?: string,
+  fetchInputFromS3 = false
 ) {
   // deliberately async -- don't hold up the rest of the function execution while waiting for dynamodb
   updateCodeExecutionStatistics(executionStatisticsData);
 
   const fileIOInfo = fileIOName ? { fileIOName } : {};
-  const executeCommand = new InvokeCommand({
-    FunctionName: "online-judge-ExecuteFunction",
+  const executeResponse = await getLambdaStreamingResponse({
+    FunctionName: "online-judge-ExecuteFunction-Stage",
     Payload: Buffer.from(
       JSON.stringify({
         type: "execute",
         payload: compiledExecutable,
-        input: problemInput,
+        input: fetchInputFromS3
+          ? problemInput
+          : (await compress(problemInput)).toString("base64"),
         timeout,
         ...fileIOInfo,
+        fetchInputFromS3,
       })
     ),
   });
-  const executeResponse = await lambdaClient.send(executeCommand);
-  const executeData: CodeExecutionResult = JSON.parse(
-    Buffer.from(executeResponse.Payload!).toString()
-  );
+  let executeData: CodeExecutionResult = JSON.parse(executeResponse);
 
   if (executeData.status !== "success") {
     return {
@@ -40,6 +47,13 @@ export default async function execute(
       debugData: executeData,
     };
   }
+
+  executeData.stdout = executeData.stdout
+    ? decompress(Buffer.from(executeData.stdout, "base64"))
+    : "";
+  executeData.stderr = executeData.stderr
+    ? decompress(Buffer.from(executeData.stderr, "base64"))
+    : "";
 
   const { stdout, exitCode, exitSignal, processError, fileOutput } =
     executeData;

@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.40.0",
-    "@aws-sdk/client-lambda": "^3.34.0",
+    "@aws-sdk/client-lambda": "^3.341.0",
     "@aws-sdk/client-s3": "^3.40.0",
     "node-fetch": "^2.6.6",
     "source-map-support": "^0.5.20",
     "uuid": "^8.3.2",
+    "zlib": "^1.0.5",
     "zod": "^3.11.6"
   },
   "scripts": {

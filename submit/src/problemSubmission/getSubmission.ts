@@ -11,7 +11,7 @@ export default async function getSubmission(
   submissionID: string
 ): Promise<ProblemSubmissionResult> {
   const dbGetParams = {
-    TableName: "online-judge",
+    TableName: "online-judge-Stage",
     Key: {
       submissionID: {
         S: submissionID,
@@ -21,6 +21,17 @@ export default async function getSubmission(
 
   const getCommand = new GetItemCommand(dbGetParams);
   const response = (await dbClient.send(getCommand)).Item!;
+
+  const hideTCResults = true;
+  const defaultHiddenTCResult = {
+    verdict: "[Hidden]",
+    time: "[Hidden]",
+    memory: "[Hidden]",
+    input: "[Hidden]",
+    expectedOutput: "[Hidden]",
+    stdout: "[Hidden]",
+    stderr: "[Hidden]",
+  } as const;
 
   const data: ProblemSubmissionResult = {
     timestamp: parseInt(response.timestamp.S!),
@@ -37,6 +48,8 @@ export default async function getSubmission(
       .map<ProblemSubmissionTestCaseResult | null>((tc) =>
         tc.NULL
           ? null
+          : hideTCResults
+          ? defaultHiddenTCResult
           : {
               verdict: tc.M!.verdict.S! as ExecutionVerdict,
               time: tc.M!.time.S!,

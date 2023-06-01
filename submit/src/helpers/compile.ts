@@ -1,6 +1,6 @@
-import { InvokeCommand } from "@aws-sdk/client-lambda";
-import { lambdaClient } from "../clients";
+import { InvokeWithResponseStreamCommand } from "@aws-sdk/client-lambda";
 import updateCodeExecutionStatistics from "./updateCodeExecutionStatistics";
+import { getLambdaStreamingResponse } from "./utils";
 
 export type CompileData = {
   language: "cpp" | "java" | "py";
@@ -10,8 +10,8 @@ export type CompileData = {
 };
 
 export default async function compile(data: CompileData) {
-  const compileCommand = new InvokeCommand({
-    FunctionName: "online-judge-ExecuteFunction",
+  const compileResponse = await getLambdaStreamingResponse({
+    FunctionName: "online-judge-ExecuteFunction-Stage",
     Payload: Buffer.from(
       JSON.stringify({
         type: "compile",
@@ -23,10 +23,7 @@ export default async function compile(data: CompileData) {
       "utf-8"
     ),
   });
-  const compileResponse = await lambdaClient.send(compileCommand);
-  const compileData = JSON.parse(
-    Buffer.from(compileResponse.Payload!).toString()
-  );
+  const compileData = JSON.parse(compileResponse);
 
   if (compileData.status === "compile_error") {
     return compileData;

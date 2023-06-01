@@ -1,4 +1,5 @@
 import * as app from "./app";
+import { compress } from "./utils";
 
 const checkTimeStderr = (stderr: string | null) => {
   expect(stderr).not.toBeNull();
@@ -6,9 +7,18 @@ const checkTimeStderr = (stderr: string | null) => {
   expect(stderr).toMatch(/Maximum resident set size \(kbytes\): [0-9]{4}/);
 };
 
+const appLambdaWrapper = async (args: app.ExecuteEvent) => {
+  return app.promiseLambdaHandler({
+    ...args,
+    ...(args.type === "execute"
+      ? { input: (await compress(args.input)).toString("base64") }
+      : {}),
+  });
+};
+
 describe("C++", () => {
   it("compiles and runs", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -25,7 +35,7 @@ describe("C++", () => {
     expect(compileResult.status).toBe("success");
 
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -44,7 +54,7 @@ describe("C++", () => {
   });
 
   it("throws compilation error", async () => {
-    const compileResult = await app.lambdaHandler({
+    const compileResult = await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -66,7 +76,7 @@ describe("C++", () => {
   });
 
   it("throws TLE error", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -83,7 +93,7 @@ describe("C++", () => {
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -103,7 +113,7 @@ describe("C++", () => {
   });
 
   it("throws Runtime Error", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -120,7 +130,7 @@ describe("C++", () => {
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -141,7 +151,7 @@ describe("C++", () => {
   });
 
   it("works with file I/O", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -159,7 +169,7 @@ describe("C++", () => {
     expect(compileResult.status).toBe("success");
 
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -180,7 +190,7 @@ describe("C++", () => {
   });
 
   it("works with regular I/O even when file I/O is an option", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -196,7 +206,7 @@ describe("C++", () => {
     expect(compileResult.status).toBe("success");
 
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -217,7 +227,7 @@ describe("C++", () => {
   });
 
   it("can handle long recursion", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "cpp",
       compilerOptions: "",
@@ -237,7 +247,7 @@ describe("C++", () => {
     expect(compileResult.status).toBe("success");
 
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "",
@@ -258,7 +268,7 @@ Object {
 
 describe("Java", () => {
   it("compiles and runs", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "java",
       compilerOptions: "",
@@ -279,7 +289,7 @@ describe("Java", () => {
     expect(compileResult.status).toBe("success");
 
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -298,7 +308,7 @@ Object {
   });
 
   it("throws compilation error", async () => {
-    const compileResult = await app.lambdaHandler({
+    const compileResult = await appLambdaWrapper({
       type: "compile",
       language: "java",
       compilerOptions: "",
@@ -329,7 +339,7 @@ Object {
   });
 
   it("throws TLE error", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "java",
       compilerOptions: "",
@@ -350,7 +360,7 @@ Object {
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -369,7 +379,7 @@ Object {
   });
 
   it("throws Runtime Error", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "java",
       compilerOptions: "",
@@ -389,7 +399,7 @@ Object {
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -410,7 +420,7 @@ Object {
 
 describe("Python", () => {
   it("runs", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "py",
       compilerOptions: "",
@@ -421,7 +431,7 @@ print(a + b + c)`,
     expect(compileResult.status).toBe("success");
 
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -440,7 +450,7 @@ Object {
   });
 
   it("throws TLE error", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "py",
       compilerOptions: "",
@@ -452,7 +462,7 @@ print(a)`,
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",
@@ -471,7 +481,7 @@ Object {
   });
 
   it("throws Runtime Error", async () => {
-    const compileResult = (await app.lambdaHandler({
+    const compileResult = (await appLambdaWrapper({
       type: "compile",
       language: "py",
       compilerOptions: "",
@@ -480,7 +490,7 @@ Object {
     })) as app.CompilationResult & { status: "success" };
     expect(compileResult.status).toBe("success");
     // the stderr output from the time command may change from execution to execution
-    const { stderr, ...runResult } = (await app.lambdaHandler({
+    const { stderr, ...runResult } = (await appLambdaWrapper({
       type: "execute",
       payload: compileResult.output,
       input: "1 2 3",

@@ -15,7 +15,7 @@ COPY package.json package-lock.json ./
 
 RUN npm install
 
-COPY tsconfig.json tsconfig.build.json ./
+COPY tsconfig.json tsconfig.build.json jest.config.js ./
 COPY src ./src
 
 RUN npm run build
