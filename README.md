@@ -1,6 +1,6 @@
 # Serverless Online Judge
 
-From the Competitive Programming Initiative
+From the Competitive Programming Initiative. Every 1,000 submissions costs us a little over 5 cents to run.
 
 ## Goal
 
