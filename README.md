@@ -122,12 +122,12 @@ To push to production:
 
 ```
 sam build
-sam deploy
+sam deploy --stack-name online-judge
 ```
 
 ## API
 
-The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod
+The API can be accessed at https://ggzk2rm2ad.execute-api.us-west-1.amazonaws.com/Prod
 
 The staging API can be accessed at https://kmazh7pzpg.execute-api.us-west-1.amazonaws.com/Prod
 

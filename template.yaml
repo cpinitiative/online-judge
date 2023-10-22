@@ -139,4 +139,4 @@ Outputs:
     Value: !GetAtt DynamoDBTable.Arn
 
 Conditions:
-  IsNotProdStack: !Not [!Equals [!Ref "AWS::StackName", "Prod"]]
+  IsNotProdStack: !Not [!Equals [!Ref "AWS::StackName", "online-judge"]]
