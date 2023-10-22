@@ -65,11 +65,27 @@ const MAX_BUFFER_SIZE = 1024 * 1024 * 30; // 30mb. note that 6mb is API gateway 
 export const lambdaHandler = async function (
   event: ExecuteEvent
 ): Promise<CompilationResult | ExecutionResult> {
-  if (existsSync("/tmp/out")) {
-    rmdirSync("/tmp/out", { recursive: true });
-  }
-  if (existsSync("/tmp/program")) {
-    rmdirSync("/tmp/program", { recursive: true });
+  const IS_AWS = process.env.AWS_EXECUTION_ENV;
+  // AWS Lambda reuses containers between executions.
+  // Occasionally, this causes ENOSPC no space left on device errors
+  // This shouldn't happen because we clean up /tmp/program and /tmp/out,
+  // but maybe a malicious user is creating many large files in /tmp or something.
+  // Anyway, as a dirty fix, we can just clear the /tmp directory every time.
+  // However, we only want to do this on AWS lambda, not anywhere else
+  // (ie. when testing locally we probably don't want to delete /tmp)
+  // See https://github.com/cpinitiative/online-judge/issues/13
+  if (IS_AWS) {
+    if (existsSync("/tmp")) {
+      rmdirSync("/tmp", { recursive: true });
+    }
+    mkdirSync("/tmp");
+  } else {
+    if (existsSync("/tmp/out")) {
+      rmdirSync("/tmp/out", { recursive: true });
+    }
+    if (existsSync("/tmp/program")) {
+      rmdirSync("/tmp/program", { recursive: true });
+    }
   }
   mkdirSync("/tmp/out");
 
@@ -94,7 +110,7 @@ export const lambdaHandler = async function (
     }
 
     // if process.env.AWS_EXECUTION_ENV is set, then we're running in Amazon Linux 2, which has a special path to g++
-    const cppCompilationCommand = process.env.AWS_EXECUTION_ENV
+    const cppCompilationCommand = IS_AWS
         ? "/opt/rh/devtoolset-10/root/usr/bin/g++"
         : "g++",
       javaCompilationCommand = "javac";
