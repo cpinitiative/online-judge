@@ -1,6 +1,6 @@
 import { UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { dbClient } from "../clients";
-import { CodeExecutionRequestData } from "../types";
+import { DB_STATS_NAME } from "../constants";
 
 export default async function updateCodeExecutionStatistics(requestData: {
   language: "cpp" | "java" | "py";
@@ -23,7 +23,7 @@ export default async function updateCodeExecutionStatistics(requestData: {
             S: "codeExecutions",
           },
         },
-        TableName: "online-judge-statistics",
+        TableName: DB_STATS_NAME,
         // Note: make sure a map called `byDate` already exists inside the table...
         UpdateExpression: `ADD totalCount :inc, #languageCount :inc, byDate.#dateCount :inc`,
         ExpressionAttributeNames: {
@@ -56,7 +56,7 @@ export default async function updateCodeExecutionStatistics(requestData: {
               S: "codeExecutions",
             },
           },
-          TableName: "online-judge-statistics",
+          TableName: DB_STATS_NAME,
           // Note: make sure a map called `byDate` already exists inside the table...
           UpdateExpression: `SET byDate = :value`,
           ConditionExpression: "attribute_not_exists(byDate)",

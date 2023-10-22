@@ -1,4 +1,4 @@
-import { spawnSync, execFileSync, spawn } from "child_process";
+import { spawnSync, execFileSync, spawn, execSync } from "child_process";
 import {
   writeFileSync,
   existsSync,
@@ -6,6 +6,7 @@ import {
   unlinkSync,
   rmdirSync,
   readFileSync,
+  rmSync,
 } from "fs";
 import {
   ExecuteProcessOutput,
@@ -76,9 +77,8 @@ export const lambdaHandler = async function (
   // See https://github.com/cpinitiative/online-judge/issues/13
   if (IS_AWS) {
     if (existsSync("/tmp")) {
-      rmdirSync("/tmp", { recursive: true });
+      execSync("rm -rf /tmp/..?* /tmp/.[!.]* /tmp/*");
     }
-    mkdirSync("/tmp");
   } else {
     if (existsSync("/tmp/out")) {
       rmdirSync("/tmp/out", { recursive: true });
@@ -87,7 +87,7 @@ export const lambdaHandler = async function (
       rmdirSync("/tmp/program", { recursive: true });
     }
   }
-  mkdirSync("/tmp/out");
+  mkdirSync("/tmp/out", { recursive: true });
 
   if (event.type === "compile") {
     writeFileSync(`/tmp/out/${event.filename}`, event.sourceCode);

@@ -1,6 +1,7 @@
 import { InvokeCommand } from "@aws-sdk/client-lambda";
 import { lambdaClient } from "../clients";
 import updateCodeExecutionStatistics from "./updateCodeExecutionStatistics";
+import { EXECUTE_FUNCTION_NAME } from "../constants";
 
 export type CompileData = {
   language: "cpp" | "java" | "py";
@@ -11,7 +12,7 @@ export type CompileData = {
 
 export default async function compile(data: CompileData) {
   const compileCommand = new InvokeCommand({
-    FunctionName: "online-judge-ExecuteFunction",
+    FunctionName: EXECUTE_FUNCTION_NAME,
     Payload: Buffer.from(
       JSON.stringify({
         type: "compile",

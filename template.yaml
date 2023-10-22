@@ -19,15 +19,26 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      FunctionName: online-judge-ExecuteFunction
+      FunctionName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-ExecuteFunction-${AWS::StackName}"
+          - online-judge-ExecuteFunction
       AutoPublishAlias: live
       Timeout: 8
       # we should probably not hardcode this...
       VpcConfig:
-        SecurityGroupIds:
-          - sg-0bc4a61cfc9289d08
-        SubnetIds:
-          - subnet-097720d648805d3ed
+        # these settings prevent internet access. only include this in
+        # production -- I haven't figured out how to get the staging
+        # environment working with this...
+        Fn::If:
+          - IsNotProdStack
+          - !Ref AWS::NoValue
+          - 
+            SecurityGroupIds:
+              - sg-0bc4a61cfc9289d08
+            SubnetIds:
+              - subnet-097720d648805d3ed
     Metadata:
       DockerTag: nodejs14.x-v1
       DockerContext: ./execute
@@ -35,7 +46,11 @@ Resources:
   SubmitFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: online-judge-SubmitFunction
+      FunctionName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-SubmitFunction-${AWS::StackName}"
+          - online-judge-SubmitFunction
       CodeUri: submit/
       AutoPublishAlias: live
       Handler: dist/src/app.lambdaHandler
@@ -51,6 +66,12 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName:
               !Ref DynamoDBTable
+      Environment:
+        Variables:
+          # for now, assume we are either in staging or in production.
+          # we need to know if we are staging or production to know
+          # which DynamoDB tables to write to, which functions to call, etc
+          IS_STAGING: !If [IsNotProdStack, "true", "false"]
       Events:
         Execute:
           Type: Api
@@ -73,7 +94,11 @@ Resources:
   StatisticsDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties: 
-      TableName: online-judge-statistics
+      TableName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-statistics-${AWS::StackName}"
+          - online-judge-statistics
       AttributeDefinitions: 
         - AttributeName: id
           AttributeType: S
@@ -85,7 +110,11 @@ Resources:
   DynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties: 
-      TableName: online-judge
+      TableName: 
+        Fn::If:
+          - IsNotProdStack
+          - !Sub "online-judge-${AWS::StackName}"
+          - online-judge
       AttributeDefinitions: 
         - AttributeName: submissionID
           AttributeType: S
@@ -108,3 +137,6 @@ Outputs:
   DynamoDBTable:
     Description: "Main Dyanmo DB Table ARN"
     Value: !GetAtt DynamoDBTable.Arn
+
+Conditions:
+  IsNotProdStack: !Not [!Equals [!Ref "AWS::StackName", "Prod"]]

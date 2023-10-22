@@ -14,6 +14,7 @@ import { dbClient, lambdaClient } from "./clients";
 import { z } from "zod";
 import { ProblemSubmissionRequestData } from "./types";
 import fetch from "node-fetch";
+import { API_PREFIX, DB_NAME } from "./constants";
 
 // todo: make idempotent?
 export const lambdaHandler = (
@@ -74,7 +75,7 @@ export const lambdaHandler = (
 
             if (!requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED) {
               const dbGetParams = {
-                TableName: "online-judge",
+                TableName: DB_NAME,
                 Key: {
                   submissionID: {
                     S: submissionID,
@@ -103,7 +104,7 @@ export const lambdaHandler = (
           if (!requestData.__INTERNAL_SUBMISSION_ALREADY_CREATED) {
             const compressedSourceCode = await compress(requestData.sourceCode);
             const dbCommand = new PutItemCommand({
-              TableName: "online-judge",
+              TableName: DB_NAME,
               Item: {
                 timestamp: {
                   S: "" + new Date().getTime(),
@@ -145,7 +146,7 @@ export const lambdaHandler = (
             // Don't wait for lambda to finish
             // Note: need to use fetch to get the right event format
             fetch(
-              `https://ggzk2rm2ad.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
+              `https://${API_PREFIX}.execute-api.us-west-1.amazonaws.com/Prod/submissions`,
               {
                 method: "POST",
                 headers: {

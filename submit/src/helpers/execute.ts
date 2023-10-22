@@ -4,6 +4,7 @@ import { CodeExecutionRequestData, CodeExecutionResult } from "../types";
 import compile from "./compile";
 import updateCodeExecutionStatistics from "./updateCodeExecutionStatistics";
 import { buildResponse, extractTimingInfo } from "./utils";
+import { EXECUTE_FUNCTION_NAME } from "../constants";
 
 export default async function execute(
   compiledExecutable: string,
@@ -17,7 +18,7 @@ export default async function execute(
 
   const fileIOInfo = fileIOName ? { fileIOName } : {};
   const executeCommand = new InvokeCommand({
-    FunctionName: "online-judge-ExecuteFunction",
+    FunctionName: EXECUTE_FUNCTION_NAME,
     Payload: Buffer.from(
       JSON.stringify({
         type: "execute",

@@ -111,6 +111,15 @@ npx prettier --write .
 
 ## Deployment
 
+To push to development:
+
+```
+sam build
+sam deploy --stack-name Stage
+```
+
+To push to production:
+
 ```
 sam build
 sam deploy
@@ -119,6 +128,8 @@ sam deploy
 ## API
 
 The API can be accessed at https://oh2kjsg6kh.execute-api.us-west-1.amazonaws.com/Prod
+
+The staging API can be accessed at https://kmazh7pzpg.execute-api.us-west-1.amazonaws.com/Prod
 
 - `POST /execute`: Code execution. Ex: USACO Guide IDE.
 - `POST /submissions` (under development): Create a new problem submission. Ex: code submission on USACO Guide groups
